@@ -177,7 +177,14 @@ void sensorSetup()
     u8g2.drawStr(0, 32, s);
     sprintf(s, "IP :%u.%u.%u.%u", ip[0], ip[1], ip[2], ip[3]);
     u8g2.drawStr(0, 42, s);
-    sprintf(s, "Loc:%s", MQTT_LOCATION);
+    if (USE_MQTT)
+    {
+      sprintf(s, "Loc:%s", MQTT_LOCATION);
+    }
+    else
+    {
+      sprintf(s, "Loc:%s", STR_MQTT_DISABLED);
+    }
     u8g2.drawStr(0, 52, s);
     sprintf(s, "Ver:%s", VERSION);
     u8g2.drawStr(0, 62, s);

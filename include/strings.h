@@ -35,6 +35,7 @@
 #define STR_CMD_TOPIC_LOG_FORMAT                 "Commands topic:%s"
 #define STR_BROKER_LOG_FORMAT                    "Broker:%s"
 #define STR_DEFAULT_LOCATION                     "unknown"
+#define STR_MQTT_DISABLED                        "<MQTT disabled>"
 
 #define STR_MQTT_LOG_PREFIX                      "MQTT    "
 #define STR_STARTUP_LOG_PREFIX                   "START   "
