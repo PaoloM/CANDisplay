@@ -25,9 +25,9 @@
 // SOFTWARE.
 // ==========================================================================================
 
-#define SENSOR_TYPE "CANDisplay"     // type of sensor
-#define VERSION     "0.1"            // firmware version
-#define MAIN_TOPIC  "candisplay"     // default MQTT topic (can be empty)
+#define SENSOR_TYPE "CANDisplay" // type of sensor
+#define VERSION "0.1"            // firmware version
+#define MAIN_TOPIC "candisplay"  // default MQTT topic (can be empty)
 
 #include "main.h"
 #include "EEPROM.h"
@@ -36,7 +36,7 @@
 
 // - Fonts
 #define HEADER_FONT u8g2_font_logisoso16_tf
-#define BODY_FONT   u8g2_font_logisoso34_tf
+#define BODY_FONT u8g2_font_logisoso34_tf
 
 // - Smart knob values
 #define KNOB_MODE_MENU 0
@@ -177,7 +177,7 @@ void sensorSetup()
     u8g2.drawStr(0, 32, s);
     sprintf(s, "IP :%u.%u.%u.%u", ip[0], ip[1], ip[2], ip[3]);
     u8g2.drawStr(0, 42, s);
-    sprintf(s, "Loc:%s", LOCATION);
+    sprintf(s, "Loc:%s", MQTT_LOCATION);
     u8g2.drawStr(0, 52, s);
     sprintf(s, "Ver:%s", VERSION);
     u8g2.drawStr(0, 62, s);
@@ -199,6 +199,7 @@ void sensorSetup()
     lcd.init();
 
     // Show splash screen
+    // TODO redesign the splash screen
     lcd.backlight();
     lcd.setCursor(0, 0);
     sprintf(client_id, "Jeeves    %x", DEVICE_ID);
@@ -221,6 +222,7 @@ void sensorSetup()
     pinMode(KY040_PIN_BUTTON, INPUT);
     pinMode(KY040_PIN_BUTTON, INPUT_PULLUP);
 
+    /* code */
     KNOB_MODE = KNOB_MODE_VOLUME;
     KNOB_VOLUME = getVolume();
     KNOB_INPUT = getInput();
@@ -258,11 +260,15 @@ void sensorSetup()
 // ------------------------------------------------------------------------------------------
 void sensorMqttSetup()
 {
-  sprintf(input_mqtt_topic, "%s/%s", LOCATION, STR_MODULAMP_TOPIC_INPUT);
-  sprintf(volume_mqtt_topic, "%s/%s", LOCATION, STR_MODULAMP_TOPIC_VOLUME);
-  if (SENSOR_DHT)
+  if (USE_MQTT)
   {
-    sprintf(temperature_mqtt_topic, "%s/%s", LOCATION, STR_SENSOR_TOPIC_DHT_TEMPERATURE);
+    /* code */
+    sprintf(input_mqtt_topic, "%s/%s", MQTT_LOCATION, STR_MODULAMP_TOPIC_INPUT);
+    sprintf(volume_mqtt_topic, "%s/%s", MQTT_LOCATION, STR_MODULAMP_TOPIC_VOLUME);
+    if (SENSOR_DHT)
+    {
+      sprintf(temperature_mqtt_topic, "%s/%s", MQTT_LOCATION, STR_SENSOR_TOPIC_DHT_TEMPERATURE);
+    }
   }
 }
 
@@ -345,6 +351,7 @@ void sensorUpdateReadingsQuick()
     switch (KY040_STATUS_CURRENT)
     {
     case KY040_STATUS_PRESSED:
+      log_out("CANDISPL", "button pressed");
       // flip between states
       switch (KNOB_MODE)
       {
@@ -370,6 +377,7 @@ void sensorUpdateReadingsQuick()
       break;
 
     case KY040_STATUS_GOINGUP:
+      log_out("CANDISPL", "knob up");
       switch (KNOB_MODE)
       {
       case KNOB_MODE_MENU: // move to the next menu entry
@@ -384,7 +392,6 @@ void sensorUpdateReadingsQuick()
         if (KNOB_VOLUME < KNOB_MODE_VOLUME_MAX)
           KNOB_VOLUME += DELTA;
         setVolume(KNOB_VOLUME);
-        Serial.println("UP");
         break;
       default:
         break;
@@ -397,6 +404,7 @@ void sensorUpdateReadingsQuick()
       break;
 
     case KY040_STATUS_GOINGDOWN:
+      log_out("CANDISPL", "knob down");
       switch (KNOB_MODE)
       {
       case KNOB_MODE_MENU: // move to the prev menu entry
@@ -411,7 +419,6 @@ void sensorUpdateReadingsQuick()
         if (KNOB_VOLUME > KNOB_MODE_VOLUME_MIN)
           KNOB_VOLUME -= DELTA;
         setVolume(KNOB_VOLUME);
-        Serial.println("DOWN");
         break;
       default:
         break;
@@ -437,24 +444,30 @@ void sensorUpdateReadingsQuick()
 // ------------------------------------------------------------------------------------------
 void sensorReportToMqtt()
 {
-  bool emitTimestamp = false;
-
-  sendToMqttTopicAndValue(input_mqtt_topic, String(KNOB_SELECTED_INPUT));
-  sendToMqttTopicAndValue(volume_mqtt_topic, String(KNOB_VOLUME));
-  // sendToMqttTopicAndValue(temperature_mqtt_topic, String(DHT_TEMPERATURE));
-
-  if (emitTimestamp) // Common timestamp for all MQTT topics pub
+  if (USE_MQTT)
   {
-    time_t temp;
-    struct tm *timeptr;
-    char s[80], t[80];
+    bool emitTimestamp = false;
 
-    temp = time(NULL);
-    timeptr = localtime(&temp);
+    sendToMqttTopicAndValue(input_mqtt_topic, String(KNOB_SELECTED_INPUT));
+    sendToMqttTopicAndValue(volume_mqtt_topic, String(KNOB_VOLUME));
+    if (SENSOR_DHT)
+    {
+      sendToMqttTopicAndValue(temperature_mqtt_topic, String(DHT_TEMPERATURE));
+    }
 
-    strftime(s, sizeof(s), "%Y-%m-%d %T", timeptr);
-    sprintf(t, "%s/%s", LOCATION, STR_SENSOR_TOPIC_TIMESTAMP);
-    sendToMqttTopicAndValue(t, s);
+    if (emitTimestamp) // Common timestamp for all MQTT topics pub
+    {
+      time_t temp;
+      struct tm *timeptr;
+      char s[80], t[80];
+
+      temp = time(NULL);
+      timeptr = localtime(&temp);
+
+      strftime(s, sizeof(s), "%Y-%m-%d %T", timeptr);
+      sprintf(t, "%s/%s", MQTT_LOCATION, STR_SENSOR_TOPIC_TIMESTAMP);
+      sendToMqttTopicAndValue(t, s);
+    }
   }
 }
 
