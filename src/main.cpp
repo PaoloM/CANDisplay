@@ -25,9 +25,9 @@
 // SOFTWARE.
 // ==========================================================================================
 
-#define SENSOR_TYPE "ModulAmp" // type of sensor
-#define VERSION "1.0"          // firmware version
-#define MAIN_TOPIC "modulamp"  // default MQTT topic (can be empty)
+#define SENSOR_TYPE "CANDisplay"     // type of sensor
+#define VERSION     "0.1"            // firmware version
+#define MAIN_TOPIC  "candisplay"     // default MQTT topic (can be empty)
 
 #include "main.h"
 #include "EEPROM.h"
@@ -36,7 +36,7 @@
 
 // - Fonts
 #define HEADER_FONT u8g2_font_logisoso16_tf
-#define BODY_FONT u8g2_font_logisoso34_tf
+#define BODY_FONT   u8g2_font_logisoso34_tf
 
 // - Smart knob values
 #define KNOB_MODE_MENU 0
