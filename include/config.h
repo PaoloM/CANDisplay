@@ -1,5 +1,5 @@
 // ==========================================================================================
-// CANDisplay - a CANBUS display device
+// CANDISPLAY - a CANBUS display device
 // config.h
 //
 // MIT License
@@ -46,5 +46,40 @@ int         JEEVES_SERVER_PORT     = 8080;              // Listening port of you
 #define     SENSOR_HD74480           false              // use the HD44780 16x2 LCD display
 #define     SENSOR_KY040             true               // use the KY-040 rotary encoder
 #define     SENSOR_DHT               false              // use the DHTxx temperature and humidity sensor
-#define     SENSOR_BMP280            false              // use the BMP280 temperature, humidity, pressure sensor
+#define     SENSOR_BMP280            false              // use the BMP280 temperature and pressure sensor
 #define     SENSOR_PMS5003           false              // TODO ** use the PMS5003 Digital Particle Concentration Laser Sensor  **
+#define     SENSOR_WS2812            true               // use a series of WS2812 addressable RGB LEDs
+
+// Menu manager (to be abstracted in the future) v0.1 2022-01-31 PaoloM
+
+// class MenuItem
+// {
+//     public:
+//         int ID;
+//         int DisplayMode;
+//         String Label;
+//         int MinValue;
+//         int MaxValue;
+//         int Value;
+//         // Action?
+// };
+
+// class Menu
+// {
+//     public:
+//         int ID;
+//         int SelectedItem;
+//         MenuItem Items[];
+// };
+
+// Menu TopLevelMenu;
+
+// void menuSetup()
+// {
+//     Menu m;
+//     m.ID = 1;
+//     m.SelectedItem = 0;
+    
+
+//     TopLevelMenu = m;
+// }

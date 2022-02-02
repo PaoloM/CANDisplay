@@ -1,5 +1,5 @@
 // ==========================================================================================
-// CANDisplay - a CANBUS display device
+// CANDISPLAY - a CANBUS display device
 // strings.h
 //
 // MIT License
@@ -77,15 +77,15 @@
 #define STR_SENSOR_TOPIC_PMS5003_PPD5P0          "airquality/PPD5P0"
 #define STR_SENSOR_TOPIC_PMS5003_PPD10P0         "airquality/PPD10P0"
 
-// ModulAmp specific strings --------------------------------------------------------------
-#define STR_MODULAMP_TOPIC_INPUT                 "input"
-#define STR_MODULAMP_TOPIC_VOLUME                "volume"
-#define STR_MODULAMP_MENU_HEADER                 "MODULAMP"
-#define STR_MODULAMP_MENU_VOLUME                 "VOLUME"
-#define STR_MODULAMP_MENU_INPUT                  "INPUT"
-#define STR_MODULAMP_MENU_INPUT_STREAM           "STREAM"
-#define STR_MODULAMP_MENU_INPUT_LINE1            "PHONO"
-#define STR_MODULAMP_MENU_INPUT_LINE2            "AUX"
-#define STR_MODULAMP_CMD_VOLUME                  "volume"
-#define STR_MODULAMP_CMD_INPUT                   "input"
-#define STR_MODULAMP_CMD_FORMAT                  "%s %d"
+// CANDISPLAY specific strings --------------------------------------------------------------
+#define STR_CANDISPLAY_TOPIC_INPUT               "input"
+#define STR_CANDISPLAY_TOPIC_VOLUME              "volume"
+#define STR_CANDISPLAY_MENU_HEADER               "CANDISPLAY"
+#define STR_CANDISPLAY_MENU_TESTRPM              "TEST RPM"
+#define STR_CANDISPLAY_MENU_INPUT                "INPUT"
+#define STR_CANDISPLAY_MENU_INPUT_STREAM         "STREAM"
+#define STR_CANDISPLAY_MENU_INPUT_LINE1          "PHONO"
+#define STR_CANDISPLAY_MENU_INPUT_LINE2          "AUX"
+#define STR_CANDISPLAY_CMD_VOLUME                "volume"
+#define STR_CANDISPLAY_CMD_INPUT                 "input"
+#define STR_CANDISPLAY_CMD_FORMAT                "%s %d"

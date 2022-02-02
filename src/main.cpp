@@ -1,5 +1,5 @@
 // ==========================================================================================
-// CANDisplay - a CANBUS display device
+// CANDISPLAY - a CANBUS display device
 // main.cpp
 //
 // MIT License
@@ -25,9 +25,9 @@
 // SOFTWARE.
 // ==========================================================================================
 
-#define SENSOR_TYPE "CANDisplay" // type of sensor
+#define SENSOR_TYPE "CANDISPLAY" // type of sensor (keep it uppercase for display compatibility)
 #define VERSION "0.1"            // firmware version
-#define MAIN_TOPIC "candisplay"  // default MQTT topic (can be empty)
+#define MAIN_TOPIC "candisplay"  // default MQTT topic (can be empty, typically lowercase)
 
 #include "main.h"
 #include "EEPROM.h"
@@ -40,7 +40,7 @@
 
 // - Smart knob values
 #define KNOB_MODE_MENU 0
-#define KNOB_MODE_VOLUME 1
+#define KNOB_MODE_TESTRPM 1
 #define KNOB_MODE_INPUT 2
 
 int KNOB_MODE_MENU_MAX = 2;
@@ -54,19 +54,18 @@ int KNOB_MODE_MENU_MIN = 1;
 int KNOB_MODE_INPUT_MAX = 2;
 int KNOB_MODE_INPUT_MIN = 0;
 
-int KNOB_MODE_VOLUME_MAX = 20;
-int KNOB_MODE_VOLUME_MIN = 0;
+int KNOB_MODE_RPM_MAX = 7000;
+int KNOB_MODE_RPM_MIN = 0;
+int KNOB_MODE_TEST_DELTA = 500;
 
-int KNOB_MODE = KNOB_MODE_VOLUME;
+int KNOB_MODE = KNOB_MODE_TESTRPM;
 
-int KNOB_MENU = KNOB_MODE_VOLUME;
+int KNOB_MENU = KNOB_MODE_TESTRPM;
 int KNOB_INPUT = KNOB_INPUT_STREAM;
 int KNOB_SELECTED_INPUT = KNOB_INPUT;
-int KNOB_VOLUME = KNOB_MODE_VOLUME_MIN;
+int KNOB_VALUE = KNOB_MODE_RPM_MIN;
 
 boolean KNOB_BUTTON_PRESSED = false;
-
-#define DELTA 1
 
 // - DHTxx values
 float DHT_TEMPERATURE;
@@ -74,6 +73,14 @@ float DHT_HUMIDITY;
 
 // TODO: add global variables here
 int addr = 0;
+
+uint32_t color_red = strip.Color(255,0,0);
+uint32_t color_green = strip.Color(0,192,0);
+uint32_t color_yellow = strip.Color(255,255,0);
+uint32_t color_white = strip.Color(255,255,255);
+uint32_t color_blue = strip.Color(0,0,255);
+uint32_t color_black = strip.Color(0,0,0);
+int rangedvalue = 0;
 
 // MQTT sensor specific topics to report values ---------------------------------------------
 char input_mqtt_topic[50];
@@ -97,17 +104,17 @@ void selectInput(int value)
 
 void setVolume(int value)
 {
-  KNOB_VOLUME = value;
+  KNOB_VALUE = value;
 }
 
-void saveVolume(int value)
+void saveValue(int value)
 {
   if (USE_EEPROM)
   {
-    EEPROM.put(0, (uint8_t)KNOB_VOLUME);
+    EEPROM.put(0, (uint8_t)KNOB_VALUE);
     EEPROM.commit();
     Serial.print("Saving volume ");
-    Serial.println(KNOB_VOLUME);
+    Serial.println(KNOB_VALUE);
   }
 }
 
@@ -122,7 +129,7 @@ void saveInput(int value)
   }
 }
 
-int getVolume()
+int getValue()
 {
   uint8_t v = 0;
 
@@ -153,6 +160,24 @@ void resetScreenTimeout()
   SCREEN_ACTIVE = true;
 }
 
+void StripBlink(int interval, uint32_t color)
+{
+  static long prevMill = 0; //prevMill stores last time Led blinked
+  static uint32_t prevColor = color_black;
+
+  if (((long)millis() - prevMill) >= interval)
+  {
+    prevMill = millis(); //stores current value of millis()
+    if (prevColor == color_black)
+    prevColor = color;
+    else
+    prevColor = color_black;
+    for (int i = 0; i < WS2812_NUMPIXELS; i++)
+      strip.setPixelColor(i, prevColor);
+    strip.show();
+  }
+}
+
 // ------------------------------------------------------------------------------------------
 // Step 1/7 - Add any sensor-specific initialization code
 // ------------------------------------------------------------------------------------------
@@ -169,9 +194,9 @@ void sensorSetup()
     // Show splash screen
     // TODO redesign the splash screen
     u8g2.clearBuffer();
-    u8g2.setFont(u8g2_font_helvB12_tr);
+    u8g2.setFont(HEADER_FONT);
     sprintf(s, "%s", SENSOR_TYPE);
-    u8g2.drawStr(0, 18, s);
+    u8g2.drawStr(0, 16, s);
     u8g2.setFont(u8g2_font_profont12_mf);
     sprintf(s, "ID :%06X", DEVICE_ID);
     u8g2.drawStr(0, 32, s);
@@ -230,8 +255,8 @@ void sensorSetup()
     pinMode(KY040_PIN_BUTTON, INPUT_PULLUP);
 
     /* code */
-    KNOB_MODE = KNOB_MODE_VOLUME;
-    KNOB_VOLUME = getVolume();
+    KNOB_MODE = KNOB_MODE_TESTRPM;
+    KNOB_VALUE = getValue();
     KNOB_INPUT = getInput();
   }
 
@@ -258,6 +283,13 @@ void sensorSetup()
     EEPROM.begin(512);
   }
 
+  if (SENSOR_WS2812) // - WS2812 RGB LED STRIP
+  {
+    strip.begin();
+    strip.setBrightness(30);
+    strip.show(); // Initialize all pixels to 'off'
+  }
+
   // TODO: Add other sensor-specific initialization code here
   /* code */
 }
@@ -270,8 +302,8 @@ void sensorMqttSetup()
   if (USE_MQTT)
   {
     /* code */
-    sprintf(input_mqtt_topic, "%s/%s", MQTT_LOCATION, STR_MODULAMP_TOPIC_INPUT);
-    sprintf(volume_mqtt_topic, "%s/%s", MQTT_LOCATION, STR_MODULAMP_TOPIC_VOLUME);
+    sprintf(input_mqtt_topic, "%s/%s", MQTT_LOCATION, STR_CANDISPLAY_TOPIC_INPUT);
+    sprintf(volume_mqtt_topic, "%s/%s", MQTT_LOCATION, STR_CANDISPLAY_TOPIC_VOLUME);
     if (SENSOR_DHT)
     {
       sprintf(temperature_mqtt_topic, "%s/%s", MQTT_LOCATION, STR_SENSOR_TOPIC_DHT_TEMPERATURE);
@@ -285,7 +317,7 @@ void sensorMqttSetup()
 void sensorUpdateReadings()
 {
   // Saving status to EEPROM
-  saveVolume(KNOB_VOLUME);
+  saveValue(KNOB_VALUE);
   saveInput(KNOB_SELECTED_INPUT);
 
   if (SENSOR_DHT) // - DHTxx TEMPERATURE AND HUMIDITY SENSOR
@@ -368,9 +400,9 @@ void sensorUpdateReadingsQuick()
       case KNOB_MODE_INPUT: // select the input
         KNOB_SELECTED_INPUT = KNOB_INPUT;
         selectInput(KNOB_SELECTED_INPUT);
-        KNOB_MODE = KNOB_MODE_VOLUME; // go directly to volume
+        KNOB_MODE = KNOB_MODE_TESTRPM; // go directly to volume
         break;
-      case KNOB_MODE_VOLUME: // go back to the menu
+      case KNOB_MODE_TESTRPM: // go back to the menu
         KNOB_MODE = KNOB_MODE_MENU;
         break;
       default:
@@ -395,10 +427,10 @@ void sensorUpdateReadingsQuick()
         if (++KNOB_INPUT > KNOB_MODE_INPUT_MAX)
           KNOB_INPUT = KNOB_MODE_INPUT_MIN;
         break;
-      case KNOB_MODE_VOLUME: // increment the volume
-        if (KNOB_VOLUME < KNOB_MODE_VOLUME_MAX)
-          KNOB_VOLUME += DELTA;
-        setVolume(KNOB_VOLUME);
+      case KNOB_MODE_TESTRPM: // increment the volume
+        if (KNOB_VALUE < KNOB_MODE_RPM_MAX)
+          KNOB_VALUE += KNOB_MODE_TEST_DELTA;
+        setVolume(KNOB_VALUE);
         break;
       default:
         break;
@@ -422,10 +454,10 @@ void sensorUpdateReadingsQuick()
         if (--KNOB_INPUT < KNOB_MODE_INPUT_MIN)
           KNOB_INPUT = KNOB_MODE_INPUT_MAX;
         break;
-      case KNOB_MODE_VOLUME: // decrement the volume
-        if (KNOB_VOLUME > KNOB_MODE_VOLUME_MIN)
-          KNOB_VOLUME -= DELTA;
-        setVolume(KNOB_VOLUME);
+      case KNOB_MODE_TESTRPM: // decrement the volume
+        if (KNOB_VALUE > KNOB_MODE_RPM_MIN)
+          KNOB_VALUE -= KNOB_MODE_TEST_DELTA;
+        setVolume(KNOB_VALUE);
         break;
       default:
         break;
@@ -442,6 +474,43 @@ void sensorUpdateReadingsQuick()
     }
   }
 
+  if (SENSOR_WS2812)
+  {
+    // The full range of LEDs on the strip is divided in three equal parts:
+    //  1. KNOB_MODE_RPM_MIN to KNOB_MODE_RPM_MAX/3 : 
+    //  2. KNOB_MODE_RPM_MAX/3 to KNOB_MODE_RPM_MAX/3*2 : 
+    //  3. KNOB_MODE_RPM_MAX/3*2 to KNOB_MODE_RPM_MAX : 
+    // Shift indicator blinks all LEDs blue when it reaches KNOB_MODE_RPM_MAX
+
+    int first_third_max = WS2812_NUMPIXELS / 3;
+    int second_third_max = first_third_max * 2;
+    uint32_t color;
+
+    rangedvalue = (int)((float)(KNOB_VALUE * (float)WS2812_NUMPIXELS) / (float)KNOB_MODE_RPM_MAX);
+
+    if (KNOB_VALUE == KNOB_MODE_RPM_MAX) // Shift pattern display
+    {
+      strip.setBrightness(200);
+      StripBlink(100, color_blue);
+    }
+    else
+    {
+      strip.setBrightness(30);
+    for (int i = 0; i < WS2812_NUMPIXELS; i++) // regular RPM display
+    {
+      if (i < first_third_max)    color = color_green;
+      if (i >= first_third_max)   color = color_white;
+      if (i >= second_third_max)  color = color_red;
+      
+      if (i <= rangedvalue)
+        strip.setPixelColor(i, color);
+      else
+        strip.setPixelColor(i, color_black);
+    }
+    strip.show();
+  }
+  }
+    
   // TODO: Perform measurements on every loop
   /* code */
 }
@@ -456,7 +525,7 @@ void sensorReportToMqtt()
     bool emitTimestamp = false;
 
     sendToMqttTopicAndValue(input_mqtt_topic, String(KNOB_SELECTED_INPUT));
-    sendToMqttTopicAndValue(volume_mqtt_topic, String(KNOB_VOLUME));
+    sendToMqttTopicAndValue(volume_mqtt_topic, String(KNOB_VALUE));
     if (SENSOR_DHT)
     {
       sendToMqttTopicAndValue(temperature_mqtt_topic, String(DHT_TEMPERATURE));
@@ -505,17 +574,17 @@ void sensorUpdateDisplay()
         // TODO redesign the screens for menu, input, volume
         case KNOB_MODE_MENU:
           u8g2.setFont(HEADER_FONT);
-          sprintf(s, "%s", STR_MODULAMP_MENU_HEADER);
+          sprintf(s, "%s", STR_CANDISPLAY_MENU_HEADER);
           u8g2.drawStr(0, 16, s);
 
           u8g2.setFont(BODY_FONT);
           switch (KNOB_MENU)
           {
           case KNOB_MODE_INPUT:
-            sprintf(s, "%s", STR_MODULAMP_MENU_INPUT);
+            sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT);
             break;
-          case KNOB_MODE_VOLUME:
-            sprintf(s, "%s", STR_MODULAMP_MENU_VOLUME);
+          case KNOB_MODE_TESTRPM:
+            sprintf(s, "%s", STR_CANDISPLAY_MENU_TESTRPM);
             break;
           }
           u8g2.drawStr(0, 60, s);
@@ -523,7 +592,7 @@ void sensorUpdateDisplay()
 
         case KNOB_MODE_INPUT:
           u8g2.setFont(HEADER_FONT);
-          sprintf(s, "%s", STR_MODULAMP_MENU_INPUT);
+          sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT);
           u8g2.drawStr(0, 16, s);
 
           u8g2.setFont(BODY_FONT);
@@ -533,26 +602,28 @@ void sensorUpdateDisplay()
             sprintf(s, "%s", "MENU"); // TODO - is this even a valid state?
             break;
           case KNOB_INPUT_STREAM:
-            sprintf(s, "%s", STR_MODULAMP_MENU_INPUT_STREAM);
+            sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT_STREAM);
             break;
           case KNOB_INPUT_LINE1:
-            sprintf(s, "%s", STR_MODULAMP_MENU_INPUT_LINE1);
+            sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT_LINE1);
             break;
           case KNOB_INPUT_LINE2:
-            sprintf(s, "%s", STR_MODULAMP_MENU_INPUT_LINE2);
+            sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT_LINE2);
             break;
           }
           u8g2.drawStr(0, 60, s);
           break;
 
-        case KNOB_MODE_VOLUME:
+        case KNOB_MODE_TESTRPM:
           u8g2.setFont(HEADER_FONT);
-          sprintf(s, "%s", STR_MODULAMP_MENU_VOLUME);
+          sprintf(s, "%s", STR_CANDISPLAY_MENU_TESTRPM);
           u8g2.drawStr(0, 16, s);
 
           u8g2.setFont(BODY_FONT);
-          sprintf(s, "%d", KNOB_VOLUME);
+          sprintf(s, "%d", KNOB_VALUE);
           u8g2.drawStr(0, 60, s);
+          // sprintf(s, "%d", rangedvalue);
+          // u8g2.drawStr(64, 60, s);
           break;
 
         default:
@@ -577,13 +648,13 @@ void sensorUpdateDisplay()
       sprintf(s, "%s", "MENU"); // TODO - is this even a valid state?
       break;
     case KNOB_INPUT_STREAM:
-      sprintf(s, "%s", STR_MODULAMP_MENU_INPUT_STREAM);
+      sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT_STREAM);
       break;
     case KNOB_INPUT_LINE1:
-      sprintf(s, "%s", STR_MODULAMP_MENU_INPUT_LINE1);
+      sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT_LINE1);
       break;
     case KNOB_INPUT_LINE2:
-      sprintf(s, "%s", STR_MODULAMP_MENU_INPUT_LINE2);
+      sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT_LINE2);
       break;
     }
     u8g2.drawStr(0, 40, s);
@@ -596,26 +667,29 @@ void sensorUpdateDisplay()
 // ------------------------------------------------------------------------------------------
 void mqttCallback(char *topic, byte *payload, uint8_t length)
 {
-  // Prepare message
-  String message = "";
-  for (int i = 0; i < int(length); i++)
+  if (USE_MQTT)
   {
-    message += (char)payload[i];
+    // Prepare message
+    String message = "";
+    for (int i = 0; i < int(length); i++)
+    {
+      message += (char)payload[i];
+    }
+
+    // log message
+    char out[255];
+    sprintf(out, STR_MESSAGE_RECEIVED_FORMAT, topic, message.c_str());
+    log_out(STR_MQTT_LOG_PREFIX, out);
+
+    // TODO: error handling
+    int v;
+    char p[255];
+    sscanf(message.c_str(), STR_CANDISPLAY_CMD_FORMAT, p, &v);
+
+    // TODO: make sure it's lowercase
+    if (!strcmp(p, STR_CANDISPLAY_CMD_VOLUME))
+      setVolume(v);
+    if (!strcmp(p, STR_CANDISPLAY_CMD_INPUT))
+      selectInput(v);
   }
-
-  // log message
-  char out[255];
-  sprintf(out, STR_MESSAGE_RECEIVED_FORMAT, topic, message.c_str());
-  log_out(STR_MQTT_LOG_PREFIX, out);
-
-  // TODO: error handling
-  int v;
-  char p[255];
-  sscanf(message.c_str(), STR_MODULAMP_CMD_FORMAT, p, &v);
-
-  // TODO: make sure it's lowercase
-  if (!strcmp(p, STR_MODULAMP_CMD_VOLUME))
-    setVolume(v);
-  if (!strcmp(p, STR_MODULAMP_CMD_INPUT))
-    selectInput(v);
 }

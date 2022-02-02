@@ -1,5 +1,5 @@
 // ==========================================================================================
-// CANDisplay - a CANBUS display device
+// CANDISPLAY - a CANBUS display device
 // sensor.h
 //
 // MIT License
@@ -42,7 +42,6 @@
 #define          SSD1306_PIN_SDA              D2
 
 ///////////////////////////////// BMP280 TEMPERATURE, PRESSURE, ALTITUDE SENSOR /////////////
-//
 // (add some info)
 #include <Adafruit_BMP280.h>
 #define          BMP280_PIN_SCL               D3
@@ -53,7 +52,7 @@
 #include <DHT.h> // adafruit/DHT sensor library@^1.4.3
 #include <DHT_U.h>
 
-#define          DHT_PIN                      D3
+#define          DHT_PIN                      D4
 #define          DHT_TYPE                     DHT11     // DHT 11
 //#define          DHT_TYPE                     DHT22     // DHT 22 (AM2302)
 //#define          DHT_TYPE                     DHT21     // DHT 21 (AM2301)
@@ -77,3 +76,15 @@
 static  uint8_t  KY040_PREV_NEXT_CODE       = 0;
 static  uint16_t KY040_STORE                = 0;
 static  int      KY040_STATUS_CURRENT       = KY040_STATUS_IDLE;
+
+///////////////////////////////// WS2812 RGB LEDs ///////////////////////////////////////////
+// (add some info)
+#include <Adafruit_NeoPixel.h> // adafruit/Adafruit NeoPixel@^1.10.4
+#define          WS2812_PIN                   D8
+#define          WS2812_NUMPIXELS             12 // strip.numPixels() returns are not reliable
+
+// IMPORTANT: To reduce NeoPixel burnout risk, add 1000 uF capacitor across
+// pixel power leads, add 300 - 500 Ohm resistor on first pixel's data input
+// and minimize distance between Arduino and first pixel.  Avoid connecting
+// on a live circuit...if you must, connect GND first.
+
