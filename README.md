@@ -52,3 +52,4 @@ _New UX tree for CANDISPLAY - exploration_
   * Strip <StripLaunch()> -> Test
   * Back -> Home
 * Pattern (0...3) -> Home
+* Default (RPM) -> Home

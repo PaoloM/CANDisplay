@@ -28,9 +28,10 @@
 #include <Arduino.h>
 
 /*--------------------------- Configuration ------------------------------*/
-#include "config.h" // Jeeves server address, port
-#include "sensor.h" // Sensor-specific data
-#include "strings.h"
+#include "config.h"           // Specific thing configuration
+#include "sensor.h"           // Sensor-specific data
+#include "strings.h"          // Localized strings
+#include "menu.h"             // Menu library
 
 /*--------------------------- Libraries ----------------------------------*/
 // External dependencies
@@ -49,6 +50,8 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <SoftwareSerial.h> // Allows sensors to avoid the USB serial port
+
+#include "EEPROM.h"
 
 #include <time.h>
 
@@ -435,6 +438,7 @@ void setup()
   mqttSetup();
   sensorSetup();
   sensorMqttSetup();
+  menuSetup();
 }
 
 void loop()

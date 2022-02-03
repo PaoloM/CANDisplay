@@ -34,6 +34,7 @@
 #define     USE_MQTT                 false              // connect and publish/subscribe to MQTT topics
 #define     USE_MQTT_GENERIC_TOPIC   false              // use the MQTT generic topic
 #define     USE_WIFI                 false              // use Wi-Fi
+#define     USE_MENU                 false              // use the unified menu system
 
 // Template info (do not change after creating the initial structure)
 #define     BOILERPLATE_VERSION      1.7                // version and date of the boilerplate template 
@@ -52,37 +53,3 @@ int         JEEVES_SERVER_PORT     = 8080;              // Listening port of you
 #define     SENSOR_PMS5003           false              // TODO ** use the PMS5003 Digital Particle Concentration Laser Sensor  **
 #define     SENSOR_WS2812            true               // use a series of WS2812 addressable RGB LEDs
 #define     SENSOR_MCP2515           false              // use the MCP2515 CAN bus interface
-
-// Menu manager (to be abstracted in the future) v0.1 2022-01-31 PaoloM
-
-// class MenuItem
-// {
-//     public:
-//         int ID;
-//         int DisplayMode;
-//         String Label;
-//         int MinValue;
-//         int MaxValue;
-//         int Value;
-//         // Action?
-// };
-
-// class Menu
-// {
-//     public:
-//         int ID;
-//         int SelectedItem;
-//         MenuItem Items[];
-// };
-
-// Menu TopLevelMenu;
-
-// void menuSetup()
-// {
-//     Menu m;
-//     m.ID = 1;
-//     m.SelectedItem = 0;
-    
-
-//     TopLevelMenu = m;
-// }

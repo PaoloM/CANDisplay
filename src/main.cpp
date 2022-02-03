@@ -5,7 +5,7 @@
 #pragma GCC diagnostic ignored "-Wwrite-strings"
 #pragma GCC diagnostic ignored "-Wunknown-pragmas"
 
-#pragma region  MIT License
+#pragma region MIT License
 //
 // Copyright (c) 2020-2022 Paolo Marcucci
 //
@@ -33,13 +33,17 @@
 #define MAIN_TOPIC "candisplay"  // default MQTT topic (can be empty, typically lowercase)
 
 #include "main.h"
-#include "EEPROM.h"
 
 // Global variables -------------------------------------------------------------------------
 
 // - Fonts
+// #define HEADER_FONT u8g2_font_fub14_tf
+// #define LARGE_FONT u8g2_font_fub35_tf
+// #define BODY_FONT u8g2_font_fub17_tf
+
 #define HEADER_FONT u8g2_font_logisoso16_tf
-#define BODY_FONT u8g2_font_logisoso34_tf
+#define LARGE_FONT u8g2_font_logisoso34_tf
+#define BODY_FONT u8g2_font_logisoso16_tf
 
 // - Smart knob values
 #define KNOB_MODE_MENU 0
@@ -62,7 +66,7 @@ int KNOB_MODE = KNOB_MODE_TESTRPM;
 int KNOB_MENU = KNOB_MODE_TESTRPM;
 int KNOB_INPUT = KNOB_INPUT_STREAM;
 int KNOB_SELECTED_INPUT = KNOB_INPUT;
-int KNOB_VALUE = CAN_RPM_MIN;
+int KNOB_VALUE = 0;
 
 boolean KNOB_BUTTON_PRESSED = false;
 
@@ -207,7 +211,7 @@ void ShowDefaultScreen()
   sprintf(s, "%s", STR_CANDISPLAY_MENU_RPM);
   u8g2.drawStr(0, 16, s);
 
-  u8g2.setFont(BODY_FONT);
+  u8g2.setFont(LARGE_FONT);
   sprintf(s, "%d", KNOB_VALUE);
   u8g2.drawStr(0, 60, s);
   u8g2.sendBuffer();
@@ -395,90 +399,110 @@ void sensorUpdateReadingsQuick()
 {
   if (SENSOR_KY040) // - KY040 rotary encoder readings
   {
-    switch (KY040_STATUS_CURRENT)
+    if (USE_MENU) // - new unified menu system
     {
-    case KY040_STATUS_PRESSED:
-      log_out("CANDISPL", "button pressed");
-      // flip between states
-      switch (KNOB_MODE)
+      switch (KY040_STATUS_CURRENT)
       {
-      case KNOB_MODE_MENU: // select the current menu entry
-        KNOB_MODE = KNOB_MENU;
+      case KY040_STATUS_PRESSED:
         break;
-      case KNOB_MODE_INPUT: // select the input
-        KNOB_SELECTED_INPUT = KNOB_INPUT;
-        selectInput(KNOB_SELECTED_INPUT);
-        KNOB_MODE = KNOB_MODE_TESTRPM; // go directly to volume
+
+      case KY040_STATUS_GOINGUP:
         break;
-      case KNOB_MODE_TESTRPM: // go back to the menu
-        KNOB_MODE = KNOB_MODE_MENU;
+
+      case KY040_STATUS_GOINGDOWN:
         break;
+
       default:
         break;
       }
-
-      ON_SPLASH_SCREEN = false;
-      resetScreenTimeout();
-      sensorUpdateDisplay();
-      KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
-      break;
-
-    case KY040_STATUS_GOINGUP:
-      log_out("CANDISPL", "knob up");
-      switch (KNOB_MODE)
+    }
+    else
+    {
+      switch (KY040_STATUS_CURRENT)
       {
-      case KNOB_MODE_MENU: // move to the next menu entry
-        if (++KNOB_MENU > KNOB_MODE_MENU_MAX)
-          KNOB_MENU = KNOB_MODE_MENU_MIN;
+      case KY040_STATUS_PRESSED:
+        log_out("CANDISPL", "button pressed");
+        // flip between states
+        switch (KNOB_MODE)
+        {
+        case KNOB_MODE_MENU: // select the current menu entry
+          KNOB_MODE = KNOB_MENU;
+          break;
+        case KNOB_MODE_INPUT: // select the input
+          KNOB_SELECTED_INPUT = KNOB_INPUT;
+          //        selectInput(KNOB_SELECTED_INPUT);
+          KNOB_MODE = KNOB_MODE_TESTRPM; // go directly to volume
+          break;
+        case KNOB_MODE_TESTRPM: // go back to the menu
+          KNOB_MODE = KNOB_MODE_MENU;
+          break;
+        default:
+          break;
+        }
+
+        ON_SPLASH_SCREEN = false;
+        resetScreenTimeout();
+        sensorUpdateDisplay();
+        KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
         break;
-      case KNOB_MODE_INPUT: // move to the next input
-        if (++KNOB_INPUT > KNOB_MODE_INPUT_MAX)
-          KNOB_INPUT = KNOB_MODE_INPUT_MIN;
+
+      case KY040_STATUS_GOINGUP:
+        log_out("CANDISPL", "knob up");
+        switch (KNOB_MODE)
+        {
+        case KNOB_MODE_MENU: // move to the next menu entry
+          if (++KNOB_MENU > KNOB_MODE_MENU_MAX)
+            KNOB_MENU = KNOB_MODE_MENU_MIN;
+          break;
+        case KNOB_MODE_INPUT: // move to the next input
+          if (++KNOB_INPUT > KNOB_MODE_INPUT_MAX)
+            KNOB_INPUT = KNOB_MODE_INPUT_MIN;
+          break;
+        case KNOB_MODE_TESTRPM: // increment the volume
+          if (KNOB_VALUE < CAN_RPM_MAX)
+            KNOB_VALUE += CAN_TESTRPM_DELTA;
+          // setVolume(KNOB_VALUE);
+          break;
+        default:
+          break;
+        }
+
+        ON_SPLASH_SCREEN = false;
+        resetScreenTimeout();
+        sensorUpdateDisplay();
+        KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
         break;
-      case KNOB_MODE_TESTRPM: // increment the volume
-        if (KNOB_VALUE < CAN_RPM_MAX)
-          KNOB_VALUE += CAN_TESTRPM_DELTA;
-        setVolume(KNOB_VALUE);
+
+      case KY040_STATUS_GOINGDOWN:
+        log_out("CANDISPL", "knob down");
+        switch (KNOB_MODE)
+        {
+        case KNOB_MODE_MENU: // move to the prev menu entry
+          if (--KNOB_MENU < KNOB_MODE_MENU_MIN)
+            KNOB_MENU = KNOB_MODE_MENU_MAX;
+          break;
+        case KNOB_MODE_INPUT: // move to the prev input
+          if (--KNOB_INPUT < KNOB_MODE_INPUT_MIN)
+            KNOB_INPUT = KNOB_MODE_INPUT_MAX;
+          break;
+        case KNOB_MODE_TESTRPM: // decrement the volume
+          if (KNOB_VALUE > CAN_RPM_MIN)
+            KNOB_VALUE -= CAN_TESTRPM_DELTA;
+          // setVolume(KNOB_VALUE);
+          break;
+        default:
+          break;
+        }
+
+        ON_SPLASH_SCREEN = false;
+        resetScreenTimeout();
+        sensorUpdateDisplay();
+        KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
         break;
+
       default:
         break;
       }
-
-      ON_SPLASH_SCREEN = false;
-      resetScreenTimeout();
-      sensorUpdateDisplay();
-      KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
-      break;
-
-    case KY040_STATUS_GOINGDOWN:
-      log_out("CANDISPL", "knob down");
-      switch (KNOB_MODE)
-      {
-      case KNOB_MODE_MENU: // move to the prev menu entry
-        if (--KNOB_MENU < KNOB_MODE_MENU_MIN)
-          KNOB_MENU = KNOB_MODE_MENU_MAX;
-        break;
-      case KNOB_MODE_INPUT: // move to the prev input
-        if (--KNOB_INPUT < KNOB_MODE_INPUT_MIN)
-          KNOB_INPUT = KNOB_MODE_INPUT_MAX;
-        break;
-      case KNOB_MODE_TESTRPM: // decrement the volume
-        if (KNOB_VALUE > CAN_RPM_MIN)
-          KNOB_VALUE -= CAN_TESTRPM_DELTA;
-        setVolume(KNOB_VALUE);
-        break;
-      default:
-        break;
-      }
-
-      ON_SPLASH_SCREEN = false;
-      resetScreenTimeout();
-      sensorUpdateDisplay();
-      KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
-      break;
-
-    default:
-      break;
     }
   }
 
@@ -520,6 +544,29 @@ void sensorUpdateReadingsQuick()
         strip.clear();
       strip.show();
     }
+  }
+
+  if (SENSOR_MCP2515) // - MCP2515 CAN BUS
+  {
+    // Set all the values from the car
+    // -------------------------------
+    // DESCRIPTION                                 PID     BYTES UNITS  RANGE/FORMULA
+    // ------------------------------------------- ------- ----- ------ ---------------------
+    // Engine speed:                               0C(012)   2   RPM    (256 * A + B) / 4
+    // Vehicle speed:                              0D(013)   1   km/h   0..255
+    //
+    // Turbocharger codes (to be verified)
+    // -----------------------------------
+    // DESCRIPTION                                 PID     BYTES UNITS  RANGE/FORMULA
+    // ------------------------------------------- ------- ----- ------ ---------------------
+    // Turbocharger compressor inlet pressure:     6F(111)   3
+    // Boost pressure control:                     70(112)  10
+    // Variable Geometry turbo (VGT) control:      71(113)   6
+    // Wastegate control:                          72(114)   5
+    // Exhaust pressure:                           73(115)   5
+    // Turbocharger RPM:                           74(116)   5
+    // Turbocharger temperature:                   75(117)   7
+    // Turbocharger temperature:                   76(118)   7
   }
 
   // TODO: Perform measurements on every loop
@@ -580,67 +627,70 @@ void sensorUpdateDisplay()
       {
         char s[20];
         u8g2.clearBuffer();
-        switch (KNOB_MODE)
+        if (USE_MENU)
         {
-        // TODO redesign the screens for menu, input, volume
-        case KNOB_MODE_MENU:
-          u8g2.setFont(HEADER_FONT);
-          sprintf(s, "%s", STR_CANDISPLAY_MENU_HEADER);
-          u8g2.drawStr(0, 16, s);
-
-          u8g2.setFont(BODY_FONT);
-          switch (KNOB_MENU)
+        } // end of new unified menu system
+        else
+        {
+          switch (KNOB_MODE)
           {
+          case KNOB_MODE_MENU:
+            u8g2.setFont(HEADER_FONT);
+            sprintf(s, "%s", STR_CANDISPLAY_MENU_HEADER);
+            u8g2.drawStr(0, 16, s);
+
+            u8g2.setFont(BODY_FONT);
+            switch (KNOB_MENU)
+            {
+            case KNOB_MODE_INPUT:
+              sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT);
+              break;
+            case KNOB_MODE_TESTRPM:
+              sprintf(s, "%s", STR_CANDISPLAY_MENU_TESTRPM);
+              break;
+            }
+            u8g2.drawStr(0, 60, s);
+            break;
+
           case KNOB_MODE_INPUT:
+            u8g2.setFont(HEADER_FONT);
             sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT);
+            u8g2.drawStr(0, 16, s);
+
+            u8g2.setFont(BODY_FONT);
+            switch (KNOB_INPUT)
+            {
+            case KNOB_INPUT_BACK:
+              sprintf(s, "%s", "MENU"); // TODO - is this even a valid state?
+              break;
+            case KNOB_INPUT_STREAM:
+              sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT_STREAM);
+              break;
+            case KNOB_INPUT_LINE1:
+              sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT_LINE1);
+              break;
+            case KNOB_INPUT_LINE2:
+              sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT_LINE2);
+              break;
+            }
+            u8g2.drawStr(0, 60, s);
             break;
+
           case KNOB_MODE_TESTRPM:
-            sprintf(s, "%s", STR_CANDISPLAY_MENU_TESTRPM);
+            u8g2.setFont(HEADER_FONT);
+//            sprintf(s, "%s", STR_CANDISPLAY_MENU_TESTRPM);
+            sprintf(s, "%s", currentMenu.label);
+            u8g2.drawStr(0, 16, s);
+
+            u8g2.setFont(LARGE_FONT);
+            sprintf(s, "%d", KNOB_VALUE);
+            u8g2.drawStr(0, 60, s);
+            break;
+
+          default:
             break;
           }
-          u8g2.drawStr(0, 60, s);
-          break;
-
-        case KNOB_MODE_INPUT:
-          u8g2.setFont(HEADER_FONT);
-          sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT);
-          u8g2.drawStr(0, 16, s);
-
-          u8g2.setFont(BODY_FONT);
-          switch (KNOB_INPUT)
-          {
-          case KNOB_INPUT_BACK:
-            sprintf(s, "%s", "MENU"); // TODO - is this even a valid state?
-            break;
-          case KNOB_INPUT_STREAM:
-            sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT_STREAM);
-            break;
-          case KNOB_INPUT_LINE1:
-            sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT_LINE1);
-            break;
-          case KNOB_INPUT_LINE2:
-            sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT_LINE2);
-            break;
-          }
-          u8g2.drawStr(0, 60, s);
-          break;
-
-        case KNOB_MODE_TESTRPM:
-          u8g2.setFont(HEADER_FONT);
-          sprintf(s, "%s", STR_CANDISPLAY_MENU_TESTRPM);
-          u8g2.drawStr(0, 16, s);
-
-          u8g2.setFont(BODY_FONT);
-          sprintf(s, "%d", KNOB_VALUE);
-          u8g2.drawStr(0, 60, s);
-          // sprintf(s, "%d", rangedvalue);
-          // u8g2.drawStr(64, 60, s);
-          break;
-
-        default:
-          break;
-        }
-
+        } // - end of old menu system
         u8g2.sendBuffer();
       }
 
@@ -682,9 +732,9 @@ void mqttCallback(char *topic, byte *payload, uint8_t length)
     sscanf(message.c_str(), STR_CANDISPLAY_CMD_FORMAT, p, &v);
 
     // TODO: make sure it's lowercase
-    if (!strcmp(p, STR_CANDISPLAY_CMD_VOLUME))
-      setVolume(v);
-    if (!strcmp(p, STR_CANDISPLAY_CMD_INPUT))
-      selectInput(v);
+    // if (!strcmp(p, STR_CANDISPLAY_CMD_VOLUME))
+    //  setVolume(v);
+    // if (!strcmp(p, STR_CANDISPLAY_CMD_INPUT))
+    //  selectInput(v);
   }
 }
