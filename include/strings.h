@@ -1,8 +1,8 @@
 // ==========================================================================================
 // CANDISPLAY - a CANBUS display device
 // strings.h
-//
-// MIT License
+
+#pragma region // MIT License
 //
 // Copyright (c) 2020-2022 Paolo Marcucci
 //
@@ -23,8 +23,9 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// ==========================================================================================
+#pragma endregion
 
+#pragma region General strings --------------------------------------------------------------
 #define STR_MESSAGE_RECEIVED_FORMAT              "Message arrived on topic [%s]: \"%s\""
 #define STR_MQTT_STARTUP_MESSAGE_FORMAT          "Sensor %s starting up"
 #define STR_GET_TAG_API_FORMAT                   "/api/things/0x%06X/tag"
@@ -36,6 +37,7 @@
 #define STR_BROKER_LOG_FORMAT                    "Broker:%s"
 #define STR_DEFAULT_LOCATION                     "unknown"
 #define STR_MQTT_DISABLED                        "<MQTT disabled>"
+#define STR_WIFI_DISABLED                        "<WiFi disabled>"
 
 #define STR_MQTT_LOG_PREFIX                      "MQTT    "
 #define STR_STARTUP_LOG_PREFIX                   "START   "
@@ -57,13 +59,12 @@
 #define STR_STARTUP_MESSAGE_FORMAT               "Jeeves.%s starting up"
 #define STR_STARTUP_VERSION_MESSAGE_FORMAT       "Firmware v%s"
 #define STR_STARTUP_DEVICE_MESSAGE_FORMAT        "Device ID:%06X"
+#pragma endregion
 
-// Sensors specific strings ----------------------------------------------------------------
+#pragma region Sensors specific strings -----------------------------------------------------
 #define STR_SENSOR_TOPIC_TIMESTAMP               "timestamp"
 #define STR_SENSOR_TOPIC_DHT_TEMPERATURE         "temperature"
 #define STR_SENSOR_TOPIC_DHT_HUMIDITY            "humidity"
-#define STR_SENSOR_ERROR_DHT_TEMPERATURE         "Error reading temperature!"
-#define STR_SENSOR_ERROR_DHT_HUMIDITY            "Error reading humidity!"
 #define STR_SENSOR_TOPIC_KY040_VALUE             "position"
 #define STR_SENSOR_TOPIC_PMS5003_AE1P0           "airquality/AE1P0"
 #define STR_SENSOR_TOPIC_PMS5003_AE2P5           "airquality/AE2P5"
@@ -77,11 +78,16 @@
 #define STR_SENSOR_TOPIC_PMS5003_PPD5P0          "airquality/PPD5P0"
 #define STR_SENSOR_TOPIC_PMS5003_PPD10P0         "airquality/PPD10P0"
 
-// CANDISPLAY specific strings --------------------------------------------------------------
+#define STR_SENSOR_ERROR_DHT_TEMPERATURE         "Error reading temperature!"
+#define STR_SENSOR_ERROR_DHT_HUMIDITY            "Error reading humidity!"
+#pragma endregion
+
+#pragma region CANDISPLAY specific strings --------------------------------------------------
 #define STR_CANDISPLAY_TOPIC_INPUT               "input"
 #define STR_CANDISPLAY_TOPIC_VOLUME              "volume"
 #define STR_CANDISPLAY_MENU_HEADER               "CANDISPLAY"
 #define STR_CANDISPLAY_MENU_TESTRPM              "TEST RPM"
+#define STR_CANDISPLAY_MENU_RPM                  "RPM"
 #define STR_CANDISPLAY_MENU_INPUT                "INPUT"
 #define STR_CANDISPLAY_MENU_INPUT_STREAM         "STREAM"
 #define STR_CANDISPLAY_MENU_INPUT_LINE1          "PHONO"
@@ -89,3 +95,4 @@
 #define STR_CANDISPLAY_CMD_VOLUME                "volume"
 #define STR_CANDISPLAY_CMD_INPUT                 "input"
 #define STR_CANDISPLAY_CMD_FORMAT                "%s %d"
+#pragma endregion

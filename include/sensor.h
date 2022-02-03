@@ -1,8 +1,8 @@
 // ==========================================================================================
 // CANDISPLAY - a CANBUS display device
 // sensor.h
-//
-// MIT License
+
+#pragma region // MIT License
 //
 // Copyright (c) 2020-2022 Paolo Marcucci
 //
@@ -23,8 +23,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// ==========================================================================================
-
+#pragma endregion
 
 ///////////////////////////////// SSD1306 I2C OLED DISPLAY //////////////////////////////////
 // Default connections in I2C are SCL -> D1 and SDA -> D2, 3.3v to VCC
@@ -52,7 +51,7 @@
 #include <DHT.h> // adafruit/DHT sensor library@^1.4.3
 #include <DHT_U.h>
 
-#define          DHT_PIN                      D4
+#define          DHT_PIN                      D3
 #define          DHT_TYPE                     DHT11     // DHT 11
 //#define          DHT_TYPE                     DHT22     // DHT 22 (AM2302)
 //#define          DHT_TYPE                     DHT21     // DHT 21 (AM2301)
@@ -78,13 +77,13 @@ static  uint16_t KY040_STORE                = 0;
 static  int      KY040_STATUS_CURRENT       = KY040_STATUS_IDLE;
 
 ///////////////////////////////// WS2812 RGB LEDs ///////////////////////////////////////////
-// (add some info)
-#include <Adafruit_NeoPixel.h> // adafruit/Adafruit NeoPixel@^1.10.4
-#define          WS2812_PIN                   D8
-#define          WS2812_NUMPIXELS             12 // strip.numPixels() returns are not reliable
-
 // IMPORTANT: To reduce NeoPixel burnout risk, add 1000 uF capacitor across
 // pixel power leads, add 300 - 500 Ohm resistor on first pixel's data input
 // and minimize distance between Arduino and first pixel.  Avoid connecting
 // on a live circuit...if you must, connect GND first.
+#include <Adafruit_NeoPixel.h> // adafruit/Adafruit NeoPixel@^1.10.4
+#define          WS2812_PIN                   D8
+#define          WS2812_NUMPIXELS             12 // strip.numPixels() returns are not reliable
 
+///////////////////////////////// MCP2515 CAN BUS ///////////////////////////////////////////
+// (add some info)

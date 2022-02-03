@@ -1,8 +1,8 @@
 // ==========================================================================================
 // CANDISPLAY - a CANBUS display device
 // main.h
-//
-// MIT License
+
+#pragma region // MIT License
 //
 // Copyright (c) 2020-2022 Paolo Marcucci
 //
@@ -23,9 +23,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// ==========================================================================================
-
-#pragma GCC diagnostic ignored "-Wwrite-strings"
+#pragma endregion
 
 #include <Arduino.h>
 
@@ -115,6 +113,7 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, WS2812_PIN,
 
 /*--------------------------- Utility functions  ----------------------------*/
 
+#pragma region Logging funtions
 void log_out(char *component, const char *value)
 {
   if (DEBUG)
@@ -156,8 +155,9 @@ void sendToMqttTopicAndValue(char *topic, String value)
     MQTT_CLIENT.publish(topic, buffer);
   }
 }
+#pragma endregion
 
-// KY-040 debouncing: A valid CW or CCW move returns 1, invalid returns 0.
+#pragma region KY-040 debouncing: A valid CW or CCW move returns 1, invalid returns 0.
 int8_t read_rotary()
 {
   static int8_t rot_enc_table[] = {0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0};
@@ -183,8 +183,9 @@ int8_t read_rotary()
   }
   return 0;
 }
+#pragma endregion
 
-// WS2812 functions
+#pragma region WS2812 functions
 // Input a value 0 to 255 to get a color value.
 // The colours are a transition r - g - b - back to r.
 uint32_t Wheel(byte WheelPos) {
@@ -269,12 +270,12 @@ void theaterChaseRainbow(uint8_t wait) {
     }
   }
 }
-
+#pragma endregion
 
 /*--------------------------- MQTT ---------------------------------------*/
 void mqttSetup()
 {
-  if (USE_MQTT)
+  if (USE_WIFI && USE_MQTT)
   {
     String res = "";
     String res2 = "";
@@ -314,11 +315,14 @@ void mqttSetup()
 /*--------------------------- WIFI ---------------------------------------*/
 void wifiSetup()
 {
-  WiFiManager wifiManager;
-  //wifiManager.resetSettings(); // uncomment this to reset the device EEPROM
-  wifiManager.autoConnect("Jeeves.AP"); // define the default access point to set wifi credentials
-  WiFi.setAutoReconnect(true);
-  WiFi.persistent(true);
+  if (USE_WIFI)
+  {
+    WiFiManager wifiManager;
+    //wifiManager.resetSettings(); // uncomment this to reset the device EEPROM
+    wifiManager.autoConnect("Jeeves.AP"); // define the default access point to set wifi credentials
+    WiFi.setAutoReconnect(true);
+    WiFi.persistent(true);
+  }
 }
 
 /*--------------------------- SERIAL ---------------------------------------*/
@@ -466,6 +470,8 @@ void loop()
   }
   // - end of KY040 debounce code
 
+  if (USE_WIFI)
+  {
   if (WiFi.status() == WL_CONNECTED)
   {
     if (USE_MQTT)
@@ -475,11 +481,12 @@ void loop()
         reconnectMqtt();
       }
     }
-  }
+    }
 
   if (USE_MQTT)
   {
     MQTT_CLIENT.loop(); // process any outstanding MQTT messages
+  }
   }
 
   sensorUpdateReadingsQuick(); // get the data from sensors at max speed
@@ -505,7 +512,8 @@ void loop()
     screenTimeoutTimer = millis();
   }
 
-  ArduinoOTA.handle(); // see if there is an OTA update request
+  if (USE_WIFI)
+    ArduinoOTA.handle(); // see if there is an OTA update request
 }
 
 void reconnectMqtt()

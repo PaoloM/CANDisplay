@@ -1,8 +1,11 @@
 // ==========================================================================================
 // CANDISPLAY - a CANBUS display device
 // main.cpp
-//
-// MIT License
+
+#pragma GCC diagnostic ignored "-Wwrite-strings"
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
+
+#pragma region  MIT License
 //
 // Copyright (c) 2020-2022 Paolo Marcucci
 //
@@ -23,7 +26,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// ==========================================================================================
+#pragma endregion
 
 #define SENSOR_TYPE "CANDISPLAY" // type of sensor (keep it uppercase for display compatibility)
 #define VERSION "0.1"            // firmware version
@@ -54,18 +57,19 @@ int KNOB_MODE_MENU_MIN = 1;
 int KNOB_MODE_INPUT_MAX = 2;
 int KNOB_MODE_INPUT_MIN = 0;
 
-int KNOB_MODE_RPM_MAX = 7000;
-int KNOB_MODE_RPM_MIN = 0;
-int KNOB_MODE_TEST_DELTA = 500;
-
 int KNOB_MODE = KNOB_MODE_TESTRPM;
 
 int KNOB_MENU = KNOB_MODE_TESTRPM;
 int KNOB_INPUT = KNOB_INPUT_STREAM;
 int KNOB_SELECTED_INPUT = KNOB_INPUT;
-int KNOB_VALUE = KNOB_MODE_RPM_MIN;
+int KNOB_VALUE = CAN_RPM_MIN;
 
 boolean KNOB_BUTTON_PRESSED = false;
+
+// - CANDISPLAY default values
+int CAN_RPM_MAX = 7000;
+int CAN_RPM_MIN = 0;
+int CAN_TESTRPM_DELTA = 500;
 
 // - DHTxx values
 float DHT_TEMPERATURE;
@@ -74,13 +78,16 @@ float DHT_HUMIDITY;
 // TODO: add global variables here
 int addr = 0;
 
-uint32_t color_red = strip.Color(255,0,0);
-uint32_t color_green = strip.Color(0,192,0);
-uint32_t color_yellow = strip.Color(255,255,0);
-uint32_t color_white = strip.Color(255,255,255);
-uint32_t color_blue = strip.Color(0,0,255);
-uint32_t color_black = strip.Color(0,0,0);
+// - WS2812 values
+uint32_t color_red = strip.Color(255, 0, 0);
+uint32_t color_green = strip.Color(0, 192, 0);
+uint32_t color_yellow = strip.Color(255, 255, 0);
+uint32_t color_white = strip.Color(255, 255, 255);
+uint32_t color_blue = strip.Color(0, 0, 255);
+uint32_t color_black = strip.Color(0, 0, 0);
 int rangedvalue = 0;
+int first_third_max = WS2812_NUMPIXELS / 3;
+int second_third_max = first_third_max * 2;
 
 // MQTT sensor specific topics to report values ---------------------------------------------
 char input_mqtt_topic[50];
@@ -97,61 +104,27 @@ char temperature_mqtt_topic[50];
 // HW routines
 // ==========================================================================================
 
-void selectInput(int value)
-{
-  KNOB_SELECTED_INPUT = value;
-}
-
-void setVolume(int value)
-{
-  KNOB_VALUE = value;
-}
-
-void saveValue(int value)
+void SaveState()
 {
   if (USE_EEPROM)
   {
-    EEPROM.put(0, (uint8_t)KNOB_VALUE);
-    EEPROM.commit();
-    Serial.print("Saving volume ");
-    Serial.println(KNOB_VALUE);
+    // TODO complete implementation
+    // EEPROM.put(0, (uint8_t)KNOB_VALUE);
+    // EEPROM.commit();
+    // Serial.print("Saving volume ");
+    // Serial.println(KNOB_VALUE);
   }
 }
 
-void saveInput(int value)
+void RetrieveState()
 {
   if (USE_EEPROM)
   {
-    EEPROM.put(1, (uint8_t)KNOB_INPUT);
-    EEPROM.commit();
-    Serial.print("Saving input ");
-    Serial.println(KNOB_INPUT);
+    // TODO complete implementation
+    // v = EEPROM.read(0);
+    // Serial.print("Reading volume ");
+    // Serial.println(v);
   }
-}
-
-int getValue()
-{
-  uint8_t v = 0;
-
-  if (USE_EEPROM)
-  {
-    v = EEPROM.read(0);
-    Serial.print("Reading volume ");
-    Serial.println(v);
-  }
-  return ((int)v);
-}
-
-int getInput()
-{
-  uint8_t v = 0;
-  if (USE_EEPROM)
-  {
-    v = EEPROM.read(1);
-    Serial.print("Reading input ");
-    Serial.println(v);
-  }
-  return ((int)v);
 }
 
 void resetScreenTimeout()
@@ -160,7 +133,7 @@ void resetScreenTimeout()
   SCREEN_ACTIVE = true;
 }
 
-void StripBlink(int interval, uint32_t color)
+void StripFullBlink(int interval, uint32_t color)
 {
   static long prevMill = 0; //prevMill stores last time Led blinked
   static uint32_t prevColor = color_black;
@@ -169,13 +142,75 @@ void StripBlink(int interval, uint32_t color)
   {
     prevMill = millis(); //stores current value of millis()
     if (prevColor == color_black)
-    prevColor = color;
+      prevColor = color;
     else
-    prevColor = color_black;
+      prevColor = color_black;
     for (int i = 0; i < WS2812_NUMPIXELS; i++)
       strip.setPixelColor(i, prevColor);
     strip.show();
   }
+}
+
+void StripLaunch()
+{
+  strip.clear();
+  // wipe up
+  // wipe down
+  // blink
+  for (int i = 0; i < 3; i++)
+    StripFullBlink(500, color_blue);
+}
+
+void ShowSplashScreen()
+{
+  char s[80];
+  IPAddress ip = WiFi.localIP();
+
+  ON_SPLASH_SCREEN = true;
+
+  u8g2.clearBuffer();
+  u8g2.setFont(HEADER_FONT);
+  sprintf(s, "%s", SENSOR_TYPE);
+  u8g2.drawStr(0, 16, s);
+  u8g2.setFont(u8g2_font_profont12_mf);
+  sprintf(s, "ID :%06X", DEVICE_ID);
+  u8g2.drawStr(0, 32, s);
+  if (USE_WIFI)
+  {
+    sprintf(s, "IP :%u.%u.%u.%u", ip[0], ip[1], ip[2], ip[3]);
+  }
+  else
+  {
+    sprintf(s, "IP :%s", STR_WIFI_DISABLED);
+  }
+  u8g2.drawStr(0, 42, s);
+  if (USE_MQTT)
+  {
+    sprintf(s, "Loc:%s", MQTT_LOCATION);
+  }
+  else
+  {
+    sprintf(s, "Loc:%s", STR_MQTT_DISABLED);
+  }
+  u8g2.drawStr(0, 52, s);
+  sprintf(s, "Ver:%s", VERSION);
+  u8g2.drawStr(0, 62, s);
+  u8g2.sendBuffer();
+}
+
+void ShowDefaultScreen()
+{
+  char s[20];
+
+  u8g2.clearBuffer();
+  u8g2.setFont(HEADER_FONT);
+  sprintf(s, "%s", STR_CANDISPLAY_MENU_RPM);
+  u8g2.drawStr(0, 16, s);
+
+  u8g2.setFont(BODY_FONT);
+  sprintf(s, "%d", KNOB_VALUE);
+  u8g2.drawStr(0, 60, s);
+  u8g2.sendBuffer();
 }
 
 // ------------------------------------------------------------------------------------------
@@ -184,39 +219,16 @@ void StripBlink(int interval, uint32_t color)
 
 void sensorSetup()
 {
-  char s[80];
-  IPAddress ip = WiFi.localIP();
+  if (USE_EEPROM)
+  {
+    EEPROM.begin(512);
+    RetrieveState();
+  }
 
   if (SENSOR_SSD1306) // - SSD1306 I2C OLED DISPLAY
   {
     u8g2.begin();
-
-    // Show splash screen
-    // TODO redesign the splash screen
-    u8g2.clearBuffer();
-    u8g2.setFont(HEADER_FONT);
-    sprintf(s, "%s", SENSOR_TYPE);
-    u8g2.drawStr(0, 16, s);
-    u8g2.setFont(u8g2_font_profont12_mf);
-    sprintf(s, "ID :%06X", DEVICE_ID);
-    u8g2.drawStr(0, 32, s);
-    sprintf(s, "IP :%u.%u.%u.%u", ip[0], ip[1], ip[2], ip[3]);
-    u8g2.drawStr(0, 42, s);
-    if (USE_MQTT)
-    {
-      sprintf(s, "Loc:%s", MQTT_LOCATION);
-    }
-    else
-    {
-      sprintf(s, "Loc:%s", STR_MQTT_DISABLED);
-    }
-    u8g2.drawStr(0, 52, s);
-    sprintf(s, "Ver:%s", VERSION);
-    u8g2.drawStr(0, 62, s);
-    u8g2.sendBuffer();
-    // End splash screen
-
-    ON_SPLASH_SCREEN = true;
+    ShowSplashScreen();
   }
 
   if (SENSOR_DHT) // - DHTxx TEMPERATURE AND HUMIDITY SENSOR
@@ -255,9 +267,9 @@ void sensorSetup()
     pinMode(KY040_PIN_BUTTON, INPUT_PULLUP);
 
     /* code */
-    KNOB_MODE = KNOB_MODE_TESTRPM;
-    KNOB_VALUE = getValue();
-    KNOB_INPUT = getInput();
+    KNOB_MODE = KNOB_MODE_TESTRPM; // TODO set the initial mode for the knob to control
+    // KNOB_VALUE = RetrieveState();
+    // KNOB_INPUT = getInput();
   }
 
   if (SENSOR_BMP280) // - BMP280 TEMPERATURE, ALTITUDE, PRESSURE SENSOR
@@ -278,16 +290,12 @@ void sensorSetup()
                     Adafruit_BMP280::STANDBY_MS_500); /* Standby time. */
   }
 
-  if (USE_EEPROM)
-  {
-    EEPROM.begin(512);
-  }
-
   if (SENSOR_WS2812) // - WS2812 RGB LED STRIP
   {
     strip.begin();
-    strip.setBrightness(30);
-    strip.show(); // Initialize all pixels to 'off'
+    strip.setBrightness(30); // TODO get the brightness from EEPROM
+    strip.show();            // Initialize all pixels to 'off'
+    StripLaunch();
   }
 
   // TODO: Add other sensor-specific initialization code here
@@ -317,8 +325,8 @@ void sensorMqttSetup()
 void sensorUpdateReadings()
 {
   // Saving status to EEPROM
-  saveValue(KNOB_VALUE);
-  saveInput(KNOB_SELECTED_INPUT);
+  // SaveState(KNOB_VALUE);
+  // saveInput(KNOB_SELECTED_INPUT);
 
   if (SENSOR_DHT) // - DHTxx TEMPERATURE AND HUMIDITY SENSOR
   {
@@ -428,8 +436,8 @@ void sensorUpdateReadingsQuick()
           KNOB_INPUT = KNOB_MODE_INPUT_MIN;
         break;
       case KNOB_MODE_TESTRPM: // increment the volume
-        if (KNOB_VALUE < KNOB_MODE_RPM_MAX)
-          KNOB_VALUE += KNOB_MODE_TEST_DELTA;
+        if (KNOB_VALUE < CAN_RPM_MAX)
+          KNOB_VALUE += CAN_TESTRPM_DELTA;
         setVolume(KNOB_VALUE);
         break;
       default:
@@ -455,8 +463,8 @@ void sensorUpdateReadingsQuick()
           KNOB_INPUT = KNOB_MODE_INPUT_MAX;
         break;
       case KNOB_MODE_TESTRPM: // decrement the volume
-        if (KNOB_VALUE > KNOB_MODE_RPM_MIN)
-          KNOB_VALUE -= KNOB_MODE_TEST_DELTA;
+        if (KNOB_VALUE > CAN_RPM_MIN)
+          KNOB_VALUE -= CAN_TESTRPM_DELTA;
         setVolume(KNOB_VALUE);
         break;
       default:
@@ -477,40 +485,43 @@ void sensorUpdateReadingsQuick()
   if (SENSOR_WS2812)
   {
     // The full range of LEDs on the strip is divided in three equal parts:
-    //  1. KNOB_MODE_RPM_MIN to KNOB_MODE_RPM_MAX/3 : 
-    //  2. KNOB_MODE_RPM_MAX/3 to KNOB_MODE_RPM_MAX/3*2 : 
-    //  3. KNOB_MODE_RPM_MAX/3*2 to KNOB_MODE_RPM_MAX : 
+    //  1. KNOB_MODE_RPM_MIN to KNOB_MODE_RPM_MAX/3 :
+    //  2. KNOB_MODE_RPM_MAX/3 to KNOB_MODE_RPM_MAX/3*2 :
+    //  3. KNOB_MODE_RPM_MAX/3*2 to KNOB_MODE_RPM_MAX :
     // Shift indicator blinks all LEDs blue when it reaches KNOB_MODE_RPM_MAX
 
-    int first_third_max = WS2812_NUMPIXELS / 3;
-    int second_third_max = first_third_max * 2;
     uint32_t color;
 
-    rangedvalue = (int)((float)(KNOB_VALUE * (float)WS2812_NUMPIXELS) / (float)KNOB_MODE_RPM_MAX);
+    rangedvalue = (int)((float)(KNOB_VALUE * (float)WS2812_NUMPIXELS) / (float)CAN_RPM_MAX);
 
-    if (KNOB_VALUE == KNOB_MODE_RPM_MAX) // Shift pattern display
+    if (KNOB_VALUE == CAN_RPM_MAX) // Shift pattern display
     {
       strip.setBrightness(200);
-      StripBlink(100, color_blue);
+      StripFullBlink(100, color_blue);
     }
     else
     {
       strip.setBrightness(30);
-    for (int i = 0; i < WS2812_NUMPIXELS; i++) // regular RPM display
-    {
-      if (i < first_third_max)    color = color_green;
-      if (i >= first_third_max)   color = color_white;
-      if (i >= second_third_max)  color = color_red;
-      
-      if (i <= rangedvalue)
-        strip.setPixelColor(i, color);
-      else
-        strip.setPixelColor(i, color_black);
+      for (int i = 0; i < WS2812_NUMPIXELS; i++) // regular RPM display
+      {
+        if (i < first_third_max)
+          color = color_green;
+        if (i >= first_third_max)
+          color = color_white;
+        if (i >= second_third_max)
+          color = color_red;
+
+        if (i <= rangedvalue)
+          strip.setPixelColor(i, color);
+        else
+          strip.setPixelColor(i, color_black);
+      }
+      if (KNOB_VALUE == CAN_RPM_MIN)
+        strip.clear();
+      strip.show();
     }
-    strip.show();
   }
-  }
-    
+
   // TODO: Perform measurements on every loop
   /* code */
 }
@@ -635,30 +646,14 @@ void sensorUpdateDisplay()
 
       /* code */ // <-- other indicators and annunciators
     }
+    else // Show splash screen
+    {
+      ShowSplashScreen();
+    }
   }
   else
   {
-    char s[20];
-
-    u8g2.clearBuffer();
-    u8g2.setFont(HEADER_FONT);
-    switch (KNOB_INPUT)
-    {
-    case KNOB_INPUT_BACK:
-      sprintf(s, "%s", "MENU"); // TODO - is this even a valid state?
-      break;
-    case KNOB_INPUT_STREAM:
-      sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT_STREAM);
-      break;
-    case KNOB_INPUT_LINE1:
-      sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT_LINE1);
-      break;
-    case KNOB_INPUT_LINE2:
-      sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT_LINE2);
-      break;
-    }
-    u8g2.drawStr(0, 40, s);
-    u8g2.sendBuffer();
+    ShowDefaultScreen();
   }
 }
 

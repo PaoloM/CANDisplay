@@ -39,5 +39,16 @@ The UX is initially set to accept volume changes.
 
 _New UX tree for CANDISPLAY - exploration_
 
-* RPM MAX - _in RPM, indicates the upper limit for the LED display_
-* SHIFT - _in RPM, indicates the lower bound of the optimal shift range_
+* Home <ShowDefaultScreen()>
+* Max RPM (0...20000) -> Home ()
+* Info <ShowSplashScreen()> -> Home
+* Brightness
+  * Day (0...255) -> Brightness
+  * Night (0...255) -> Brightness
+  * Back -> Home
+* Autodim (Y/N) -> Home
+* Test
+  * RPM (0...7000) -> Test
+  * Strip <StripLaunch()> -> Test
+  * Back -> Home
+* Pattern (0...3) -> Home
