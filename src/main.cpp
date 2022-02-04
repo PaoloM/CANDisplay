@@ -38,12 +38,12 @@
 
 // - Fonts
 // #define HEADER_FONT u8g2_font_fub14_tf
-// #define LARGE_FONT u8g2_font_fub35_tf
+// #define LARGE_FONT u8g2_font_fub38_tf
 // #define BODY_FONT u8g2_font_fub17_tf
 
 #define HEADER_FONT u8g2_font_logisoso16_tf
 #define LARGE_FONT u8g2_font_logisoso34_tf
-#define BODY_FONT u8g2_font_logisoso16_tf
+#define BODY_FONT u8g2_font_logisoso18_tf
 
 // - Smart knob values
 #define KNOB_MODE_MENU 0
@@ -213,7 +213,7 @@ void ShowDefaultScreen()
 
   u8g2.setFont(LARGE_FONT);
   sprintf(s, "%d", KNOB_VALUE);
-  u8g2.drawStr(0, 60, s);
+  u8g2.drawStr(0, 63, s);
   u8g2.sendBuffer();
 }
 
@@ -392,6 +392,18 @@ void sensorUpdateReadings()
   }
 }
 
+void LogCurrentMenuItem()
+{
+  char s[128];
+
+  sprintf(s, "Action:[%d] Label:[%s] Type:[%d] menuItemCurrent:[%d] intValueCurrent:[%d]",
+          KY040_STATUS_CURRENT,
+          currentMenu.label, currentMenu.type,
+          currentMenu.menuValueCurrent,
+          currentMenu.intValueCurrent);
+  log_out("CANDISPL", s);
+}
+
 // ------------------------------------------------------------------------------------------
 // Step 3b/7 - Read data from the sensor(s) on every loop
 // ------------------------------------------------------------------------------------------
@@ -399,18 +411,125 @@ void sensorUpdateReadingsQuick()
 {
   if (SENSOR_KY040) // - KY040 rotary encoder readings
   {
-    if (USE_MENU) // - new unified menu system
+    if (USE_MENU) // - new unified menu system, currentMenu is the active item
     {
       switch (KY040_STATUS_CURRENT)
       {
       case KY040_STATUS_PRESSED:
+      {
+        switch (currentMenu.type)
+        {
+        case MENU_TYPE_MENU:
+        {
+          LogCurrentMenuItem();
+          MenuItem *mi = currentMenu.m[currentMenu.menuValueCurrent];
+          currentMenu = *mi;
+        }
         break;
+
+        case MENU_TYPE_INT:
+        {
+          LogCurrentMenuItem();
+          // TODO save the appropriate value
+          currentMenu = topmenu;
+        }
+        break;
+
+        case MENU_TYPE_TRUE_FALSE:
+        {
+        }
+        break;
+
+        default:
+          break;
+        }
+      }
+      
+      ON_SPLASH_SCREEN = false;
+      resetScreenTimeout();
+      sensorUpdateDisplay();
+      KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
+      break;
 
       case KY040_STATUS_GOINGUP:
+      {
+        switch (currentMenu.type)
+        {
+        case MENU_TYPE_MENU:
+        {
+          LogCurrentMenuItem();
+          if (currentMenu.menuValueCurrent < currentMenu.menuItemsCount - 1)
+            currentMenu.menuValueCurrent++;
+          else
+            currentMenu.menuValueCurrent = 0;
+        }
         break;
 
-      case KY040_STATUS_GOINGDOWN:
+        case MENU_TYPE_INT:
+        {
+          LogCurrentMenuItem();
+          if (currentMenu.intValueCurrent < currentMenu.intValueMax - currentMenu.intValueDelta)
+            currentMenu.intValueCurrent += currentMenu.intValueDelta;
+          else
+            currentMenu.intValueCurrent = currentMenu.intValueMax;
+        }
         break;
+
+        case MENU_TYPE_TRUE_FALSE:
+        {
+        }
+        break;
+
+        default:
+          break;
+        }
+      }
+      
+      ON_SPLASH_SCREEN = false;
+      resetScreenTimeout();
+      sensorUpdateDisplay();
+      KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
+      break;
+
+      case KY040_STATUS_GOINGDOWN:
+      {
+        switch (currentMenu.type)
+        {
+        case MENU_TYPE_MENU:
+        {
+          LogCurrentMenuItem();
+          if (currentMenu.menuValueCurrent > 0)
+            currentMenu.menuValueCurrent--;
+          else
+            currentMenu.menuValueCurrent = currentMenu.menuItemsCount - 1;
+        }
+        break;
+
+        case MENU_TYPE_INT:
+        {
+          LogCurrentMenuItem();
+          if (currentMenu.intValueCurrent > currentMenu.intValueMin + currentMenu.intValueDelta)
+            currentMenu.intValueCurrent -= currentMenu.intValueDelta;
+          else
+            currentMenu.intValueCurrent = currentMenu.intValueMin;
+        }
+        break;
+
+        case MENU_TYPE_TRUE_FALSE:
+        {
+        }
+        break;
+
+        default:
+          break;
+        }
+      }
+      
+      ON_SPLASH_SCREEN = false;
+      resetScreenTimeout();
+      sensorUpdateDisplay();
+      KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
+      break;
 
       default:
         break;
@@ -629,6 +748,30 @@ void sensorUpdateDisplay()
         u8g2.clearBuffer();
         if (USE_MENU)
         {
+          u8g2.setFont(HEADER_FONT);
+          sprintf(s, "%s", currentMenu.label);
+          u8g2.drawStr(0, 16, s);
+
+          switch (currentMenu.type)
+          {
+          case MENU_TYPE_MENU:
+          {
+            u8g2.setFont(BODY_FONT);
+            u8g2.drawStr(0, 40, currentMenu.m[currentMenu.menuValueCurrent]->label);
+          }
+          break;
+
+          case MENU_TYPE_INT:
+          {
+            u8g2.setFont(LARGE_FONT);
+            sprintf(s, "%d", currentMenu.intValueCurrent);
+            u8g2.drawStr(0, 63, s);
+          }
+          break;
+
+          default:
+            break;
+          }
         } // end of new unified menu system
         else
         {
@@ -678,13 +821,13 @@ void sensorUpdateDisplay()
 
           case KNOB_MODE_TESTRPM:
             u8g2.setFont(HEADER_FONT);
-//            sprintf(s, "%s", STR_CANDISPLAY_MENU_TESTRPM);
+            //            sprintf(s, "%s", STR_CANDISPLAY_MENU_TESTRPM);
             sprintf(s, "%s", currentMenu.label);
             u8g2.drawStr(0, 16, s);
 
             u8g2.setFont(LARGE_FONT);
             sprintf(s, "%d", KNOB_VALUE);
-            u8g2.drawStr(0, 60, s);
+            u8g2.drawStr(0, 63, s);
             break;
 
           default:
@@ -704,37 +847,5 @@ void sensorUpdateDisplay()
   else
   {
     ShowDefaultScreen();
-  }
-}
-
-// ------------------------------------------------------------------------------------------
-// Step 7/7 (optional) - This callback is invoked when an MQTT message is received.
-// ------------------------------------------------------------------------------------------
-void mqttCallback(char *topic, byte *payload, uint8_t length)
-{
-  if (USE_MQTT)
-  {
-    // Prepare message
-    String message = "";
-    for (int i = 0; i < int(length); i++)
-    {
-      message += (char)payload[i];
-    }
-
-    // log message
-    char out[255];
-    sprintf(out, STR_MESSAGE_RECEIVED_FORMAT, topic, message.c_str());
-    log_out(STR_MQTT_LOG_PREFIX, out);
-
-    // TODO: error handling
-    int v;
-    char p[255];
-    sscanf(message.c_str(), STR_CANDISPLAY_CMD_FORMAT, p, &v);
-
-    // TODO: make sure it's lowercase
-    // if (!strcmp(p, STR_CANDISPLAY_CMD_VOLUME))
-    //  setVolume(v);
-    // if (!strcmp(p, STR_CANDISPLAY_CMD_INPUT))
-    //  selectInput(v);
   }
 }

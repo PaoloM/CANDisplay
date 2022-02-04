@@ -29,35 +29,43 @@
 #define MENU_TYPE_INT 1
 #define MENU_TYPE_TRUE_FALSE 2
 
-#define MENU_MAX_CHILDREN 4
+#define MENU_MAX_CHILDREN 8
 
 struct MenuItem
 {
     int ID;
     char label[20];
-    int parentID;
-    int type;
-    int itemsCount;
-
-    int intValueMin;
-    int intValueMax;
-    int intValueCurrent;
+    int parentID = -1;
+    int type = MENU_TYPE_INT;
+    
+    int intValueMin = 0;
+    int intValueMax = 10;
+    int intValueCurrent = 0;
+    int intValueDelta = 1;
 
     char tfValueFalse[20];
     char tfValueTrue[20];
-    bool tfValueCurrent;
+    bool tfValueCurrent = true;
 
+    int menuItemsCount = 0;
     MenuItem *m[MENU_MAX_CHILDREN];
     int menuValueCurrent;
 };
 
 MenuItem currentMenu;
+bool inMenu = true;
 
 // /* --- to be moved in main.h
 
+    MenuItem maxrpm;
+    MenuItem autodim;
+    MenuItem nightbright;
+    MenuItem daybright;
+    MenuItem brightness;
+    MenuItem topmenu;
+
 void menuSetup()
 {
-    MenuItem maxrpm;
     maxrpm.ID = 1;
     strcpy(maxrpm.label, "MAX RPM");
     maxrpm.parentID = 0;
@@ -65,8 +73,8 @@ void menuSetup()
     maxrpm.intValueMin = 0;
     maxrpm.intValueMax = 20000;
     maxrpm.intValueCurrent = 0;
+    maxrpm.intValueDelta = 500;
 
-    MenuItem autodim;
     autodim.ID = 3;
     strcpy(autodim.label, "AUTODIM");
     autodim.parentID = 2;
@@ -75,7 +83,6 @@ void menuSetup()
     strcpy(autodim.tfValueTrue, "ENABLED");
     autodim.tfValueCurrent = true;
 
-    MenuItem nightbright;
     nightbright.ID = 4;
     strcpy(nightbright.label, "NIGHT");
     nightbright.parentID = 2;
@@ -84,7 +91,6 @@ void menuSetup()
     nightbright.intValueMax = 255;
     nightbright.intValueCurrent = 20;
 
-    MenuItem daybright;
     daybright.ID = 5;
     strcpy(daybright.label, "DAY");
     daybright.parentID = 2;
@@ -93,28 +99,25 @@ void menuSetup()
     daybright.intValueMax = 255;
     daybright.intValueCurrent = 150;
 
-    MenuItem brightness;
     brightness.ID = 2;
     strcpy(brightness.label, "BRIGHTNESS");
     brightness.parentID = 0;
     brightness.type = MENU_TYPE_MENU;
-    brightness.itemsCount = 3;
-    // malloc?
+    brightness.menuItemsCount = 4;
     brightness.m[0] = &autodim;
     brightness.m[1] = &daybright;
     brightness.m[2] = &nightbright;
+    brightness.m[3] = &topmenu;
 
-    MenuItem topmenu;
     topmenu.ID = 0;
     strcpy(topmenu.label, "SETTINGS");
     topmenu.parentID = -1;
     topmenu.type = MENU_TYPE_MENU;
-    topmenu.itemsCount = 2;
-    // malloc?
-    topmenu.m[0] = &maxrpm;
-    topmenu.m[1] = &brightness;
+    topmenu.menuItemsCount = 2;
+    topmenu.m[1] = &maxrpm;
+    topmenu.m[0] = &brightness;
 
-    currentMenu = brightness;
+    currentMenu = topmenu;
 }
 
 // --- */

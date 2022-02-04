@@ -28,13 +28,13 @@
 #define     DEBUG                    true               // true to show messages on the Serial monitor
 
 #define     DELAY_MS                 10000              // milliseconds between sensor readings
-#define     SPLASH_SCREEN_DELAY      5000               // milliseconds before splash screen dismissal
-#define     SCREEN_TIMEOUT_DELAY     10000              // milliseconds before screen timeout
+#define     SPLASH_SCREEN_DELAY      2000               // milliseconds before splash screen dismissal
+#define     SCREEN_TIMEOUT_DELAY     5000               // milliseconds before screen timeout
 #define     USE_EEPROM               false              // use EEPROM for settings storage
 #define     USE_MQTT                 false              // connect and publish/subscribe to MQTT topics
 #define     USE_MQTT_GENERIC_TOPIC   false              // use the MQTT generic topic
 #define     USE_WIFI                 false              // use Wi-Fi
-#define     USE_MENU                 false              // use the unified menu system
+#define     USE_MENU                 true               // use the unified menu system
 
 // Template info (do not change after creating the initial structure)
 #define     BOILERPLATE_VERSION      1.7                // version and date of the boilerplate template 
