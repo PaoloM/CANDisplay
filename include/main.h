@@ -57,11 +57,12 @@
 
 /*--------------------------- Global Variables ---------------------------*/
 // MQTT general
-const char *MQTT_STATUS_TOPIC = "Events"; // MQTT topic to report startup events
-char MQTT_BROKER[20];                     // IP address of your MQTT broker
-char MQTT_MESSAGE_BUFFER[150];            // General purpose buffer for MQTT messages
-char MQTT_CMD_TOPIC[50];                  // MQTT topic for receiving commands
-char MQTT_LOCATION[50];                   // Room/area where the sensor is located
+const char *MQTT_STATUS_TOPIC = "Events";        // MQTT topic to report startup events
+char        MQTT_BROKER[20];                     // IP address of your MQTT broker
+char        MQTT_MESSAGE_BUFFER[150];            // General purpose buffer for MQTT messages
+char        MQTT_CMD_TOPIC[50];                  // MQTT topic for receiving commands
+char        MQTT_LOCATION[50];                   // Room/area where the sensor is located
+bool        MQTT_REPORT_TIMESTAMP = false;       // Report timestamp as a separate topic
 
 // Wifi
 #define WIFI_CONNECT_INTERVAL 500    // Wait 500ms intervals for wifi connection
@@ -92,7 +93,7 @@ bool SCREEN_ACTIVE = false;
 void mqttCallback(char *topic, byte *payload, uint8_t length);
 bool initWifi();
 void reconnectMqtt();
-void sensorReportToMqtt();
+void sensorReportToMqtt(bool emitTimestamp);
 void sensorReportToSerial();
 void sensorUpdateReadings();
 void sensorUpdateReadingsQuick();
@@ -498,7 +499,7 @@ void loop()
   if (millis() - previousUpdateTime >= DELAY_MS)
   {
     sensorUpdateReadings(); // get the data from sensors
-    sensorReportToMqtt();   // send messages to the MQTT broker
+    sensorReportToMqtt(MQTT_REPORT_TIMESTAMP);   // send messages to the MQTT broker
     sensorReportToSerial(); // print the data on the serial port
     sensorUpdateDisplay();  // update the local display, if present
     previousUpdateTime = millis();

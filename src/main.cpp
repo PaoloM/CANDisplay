@@ -36,16 +36,12 @@
 
 // Global variables -------------------------------------------------------------------------
 
-// - Fonts
-// #define HEADER_FONT u8g2_font_fub14_tf
-// #define LARGE_FONT u8g2_font_fub38_tf
-// #define BODY_FONT u8g2_font_fub17_tf
+// - SSD1306 Fonts
+#define FONT_HEADER u8g2_font_logisoso16_tf
+#define FONT_LARGE u8g2_font_logisoso38_tf
+#define FONT_BODY u8g2_font_logisoso20_tf
 
-#define HEADER_FONT u8g2_font_logisoso16_tf
-#define LARGE_FONT u8g2_font_logisoso34_tf
-#define BODY_FONT u8g2_font_logisoso18_tf
-
-// - Smart knob values
+// - KY040 knob values
 #define KNOB_MODE_MENU 0
 #define KNOB_MODE_TESTRPM 1
 #define KNOB_MODE_INPUT 2
@@ -92,6 +88,9 @@ uint32_t color_black = strip.Color(0, 0, 0);
 int rangedvalue = 0;
 int first_third_max = WS2812_NUMPIXELS / 3;
 int second_third_max = first_third_max * 2;
+int WS2812_EXTRAPIXEL_1 = WS2812_NUMPIXELS + 1;
+int WS2812_EXTRAPIXEL_2 = WS2812_NUMPIXELS + 2;
+int WS2812_EXTRAPIXEL_3 = WS2812_NUMPIXELS + 3;
 
 // MQTT sensor specific topics to report values ---------------------------------------------
 char input_mqtt_topic[50];
@@ -131,12 +130,6 @@ void RetrieveState()
   }
 }
 
-void resetScreenTimeout()
-{
-  screenTimeoutTimer = millis();
-  SCREEN_ACTIVE = true;
-}
-
 void StripFullBlink(int interval, uint32_t color)
 {
   static long prevMill = 0; //prevMill stores last time Led blinked
@@ -165,7 +158,13 @@ void StripLaunch()
     StripFullBlink(500, color_blue);
 }
 
-void ShowSplashScreen()
+void SSD1306_ResetTimeout()
+{
+  screenTimeoutTimer = millis();
+  SCREEN_ACTIVE = true;
+}
+
+void SSD1306_ShowSplashScreen()
 {
   char s[80];
   IPAddress ip = WiFi.localIP();
@@ -173,7 +172,7 @@ void ShowSplashScreen()
   ON_SPLASH_SCREEN = true;
 
   u8g2.clearBuffer();
-  u8g2.setFont(HEADER_FONT);
+  u8g2.setFont(FONT_HEADER);
   sprintf(s, "%s", SENSOR_TYPE);
   u8g2.drawStr(0, 16, s);
   u8g2.setFont(u8g2_font_profont12_mf);
@@ -202,16 +201,16 @@ void ShowSplashScreen()
   u8g2.sendBuffer();
 }
 
-void ShowDefaultScreen()
+void SSD1306_ShowDefaultScreen()
 {
   char s[20];
 
   u8g2.clearBuffer();
-  u8g2.setFont(HEADER_FONT);
+  u8g2.setFont(FONT_HEADER);
   sprintf(s, "%s", STR_CANDISPLAY_MENU_RPM);
   u8g2.drawStr(0, 16, s);
 
-  u8g2.setFont(LARGE_FONT);
+  u8g2.setFont(FONT_LARGE);
   sprintf(s, "%d", KNOB_VALUE);
   u8g2.drawStr(0, 63, s);
   u8g2.sendBuffer();
@@ -232,7 +231,7 @@ void sensorSetup()
   if (SENSOR_SSD1306) // - SSD1306 I2C OLED DISPLAY
   {
     u8g2.begin();
-    ShowSplashScreen();
+    SSD1306_ShowSplashScreen();
   }
 
   if (SENSOR_DHT) // - DHTxx TEMPERATURE AND HUMIDITY SENSOR
@@ -314,8 +313,7 @@ void sensorMqttSetup()
   if (USE_MQTT)
   {
     /* code */
-    sprintf(input_mqtt_topic, "%s/%s", MQTT_LOCATION, STR_CANDISPLAY_TOPIC_INPUT);
-    sprintf(volume_mqtt_topic, "%s/%s", MQTT_LOCATION, STR_CANDISPLAY_TOPIC_VOLUME);
+
     if (SENSOR_DHT)
     {
       sprintf(temperature_mqtt_topic, "%s/%s", MQTT_LOCATION, STR_SENSOR_TOPIC_DHT_TEMPERATURE);
@@ -446,7 +444,7 @@ void sensorUpdateReadingsQuick()
       }
       
       ON_SPLASH_SCREEN = false;
-      resetScreenTimeout();
+      SSD1306_ResetTimeout();
       sensorUpdateDisplay();
       KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
       break;
@@ -486,7 +484,7 @@ void sensorUpdateReadingsQuick()
       }
       
       ON_SPLASH_SCREEN = false;
-      resetScreenTimeout();
+      SSD1306_ResetTimeout();
       sensorUpdateDisplay();
       KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
       break;
@@ -526,7 +524,7 @@ void sensorUpdateReadingsQuick()
       }
       
       ON_SPLASH_SCREEN = false;
-      resetScreenTimeout();
+      SSD1306_ResetTimeout();
       sensorUpdateDisplay();
       KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
       break;
@@ -560,7 +558,7 @@ void sensorUpdateReadingsQuick()
         }
 
         ON_SPLASH_SCREEN = false;
-        resetScreenTimeout();
+        SSD1306_ResetTimeout();
         sensorUpdateDisplay();
         KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
         break;
@@ -587,7 +585,7 @@ void sensorUpdateReadingsQuick()
         }
 
         ON_SPLASH_SCREEN = false;
-        resetScreenTimeout();
+        SSD1306_ResetTimeout();
         sensorUpdateDisplay();
         KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
         break;
@@ -614,7 +612,7 @@ void sensorUpdateReadingsQuick()
         }
 
         ON_SPLASH_SCREEN = false;
-        resetScreenTimeout();
+        SSD1306_ResetTimeout();
         sensorUpdateDisplay();
         KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
         break;
@@ -695,14 +693,12 @@ void sensorUpdateReadingsQuick()
 // ------------------------------------------------------------------------------------------
 // Step 4/7 - Send the values to the MQTT server
 // ------------------------------------------------------------------------------------------
-void sensorReportToMqtt()
+void sensorReportToMqtt(bool emitTimestamp)
 {
   if (USE_MQTT)
   {
-    bool emitTimestamp = false;
+    /* code */
 
-    sendToMqttTopicAndValue(input_mqtt_topic, String(KNOB_SELECTED_INPUT));
-    sendToMqttTopicAndValue(volume_mqtt_topic, String(KNOB_VALUE));
     if (SENSOR_DHT)
     {
       sendToMqttTopicAndValue(temperature_mqtt_topic, String(DHT_TEMPERATURE));
@@ -748,7 +744,7 @@ void sensorUpdateDisplay()
         u8g2.clearBuffer();
         if (USE_MENU)
         {
-          u8g2.setFont(HEADER_FONT);
+          u8g2.setFont(FONT_HEADER);
           sprintf(s, "%s", currentMenu.label);
           u8g2.drawStr(0, 16, s);
 
@@ -756,14 +752,14 @@ void sensorUpdateDisplay()
           {
           case MENU_TYPE_MENU:
           {
-            u8g2.setFont(BODY_FONT);
+            u8g2.setFont(FONT_BODY);
             u8g2.drawStr(0, 40, currentMenu.m[currentMenu.menuValueCurrent]->label);
           }
           break;
 
           case MENU_TYPE_INT:
           {
-            u8g2.setFont(LARGE_FONT);
+            u8g2.setFont(FONT_LARGE);
             sprintf(s, "%d", currentMenu.intValueCurrent);
             u8g2.drawStr(0, 63, s);
           }
@@ -778,11 +774,11 @@ void sensorUpdateDisplay()
           switch (KNOB_MODE)
           {
           case KNOB_MODE_MENU:
-            u8g2.setFont(HEADER_FONT);
+            u8g2.setFont(FONT_HEADER);
             sprintf(s, "%s", STR_CANDISPLAY_MENU_HEADER);
             u8g2.drawStr(0, 16, s);
 
-            u8g2.setFont(BODY_FONT);
+            u8g2.setFont(FONT_BODY);
             switch (KNOB_MENU)
             {
             case KNOB_MODE_INPUT:
@@ -796,11 +792,11 @@ void sensorUpdateDisplay()
             break;
 
           case KNOB_MODE_INPUT:
-            u8g2.setFont(HEADER_FONT);
+            u8g2.setFont(FONT_HEADER);
             sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT);
             u8g2.drawStr(0, 16, s);
 
-            u8g2.setFont(BODY_FONT);
+            u8g2.setFont(FONT_BODY);
             switch (KNOB_INPUT)
             {
             case KNOB_INPUT_BACK:
@@ -820,12 +816,12 @@ void sensorUpdateDisplay()
             break;
 
           case KNOB_MODE_TESTRPM:
-            u8g2.setFont(HEADER_FONT);
+            u8g2.setFont(FONT_HEADER);
             //            sprintf(s, "%s", STR_CANDISPLAY_MENU_TESTRPM);
             sprintf(s, "%s", currentMenu.label);
             u8g2.drawStr(0, 16, s);
 
-            u8g2.setFont(LARGE_FONT);
+            u8g2.setFont(FONT_LARGE);
             sprintf(s, "%d", KNOB_VALUE);
             u8g2.drawStr(0, 63, s);
             break;
@@ -841,11 +837,11 @@ void sensorUpdateDisplay()
     }
     else // Show splash screen
     {
-      ShowSplashScreen();
+      SSD1306_ShowSplashScreen();
     }
   }
   else
   {
-    ShowDefaultScreen();
+    SSD1306_ShowDefaultScreen();
   }
 }

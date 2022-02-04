@@ -83,16 +83,11 @@
 #pragma endregion
 
 #pragma region CANDISPLAY specific strings --------------------------------------------------
-#define STR_CANDISPLAY_TOPIC_INPUT               "input"
-#define STR_CANDISPLAY_TOPIC_VOLUME              "volume"
 #define STR_CANDISPLAY_MENU_HEADER               "CANDISPLAY"
 #define STR_CANDISPLAY_MENU_TESTRPM              "TEST RPM"
-#define STR_CANDISPLAY_MENU_RPM                  "RPM"
+#define STR_CANDISPLAY_MENU_RPM                  "ENGINE SPEED"
 #define STR_CANDISPLAY_MENU_INPUT                "INPUT"
 #define STR_CANDISPLAY_MENU_INPUT_STREAM         "STREAM"
 #define STR_CANDISPLAY_MENU_INPUT_LINE1          "PHONO"
 #define STR_CANDISPLAY_MENU_INPUT_LINE2          "AUX"
-#define STR_CANDISPLAY_CMD_VOLUME                "volume"
-#define STR_CANDISPLAY_CMD_INPUT                 "input"
-#define STR_CANDISPLAY_CMD_FORMAT                "%s %d"
 #pragma endregion

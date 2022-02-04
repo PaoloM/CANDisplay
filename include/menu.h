@@ -25,11 +25,20 @@
 // SOFTWARE.
 #pragma endregion
 
+// ---- Things specific menu item values
+#define MENU_VALUE_NONE 0
+#define MENU_VALUE_MAXRPM 1
+#define MENU_VALUE_BRIGHTNESS_DAY 2
+#define MENU_VALUE_BRIGHTNESS_NIGHT 3
+#define MENU_VALUE_BRIGHTNESS_AUTODIM 4
+
+// ---- Generic menu infrastructure
 #define MENU_TYPE_MENU 0
 #define MENU_TYPE_INT 1
-#define MENU_TYPE_TRUE_FALSE 2
+#define MENU_TYPE_SELECT 2
+#define MENU_TYPE_HOME 3
 
-#define MENU_MAX_CHILDREN 8
+#define MENU_MAX_CHILDREN 20
 
 struct MenuItem
 {
@@ -43,12 +52,10 @@ struct MenuItem
     int intValueCurrent = 0;
     int intValueDelta = 1;
 
-    char tfValueFalse[20];
-    char tfValueTrue[20];
-    bool tfValueCurrent = true;
+    int valueType = 0;
 
     int menuItemsCount = 0;
-    MenuItem *m[MENU_MAX_CHILDREN];
+    int m[MENU_MAX_CHILDREN];
     int menuValueCurrent;
 };
 
@@ -57,19 +64,48 @@ bool inMenu = true;
 
 // /* --- to be moved in main.h
 
-    MenuItem maxrpm;
-    MenuItem autodim;
-    MenuItem nightbright;
-    MenuItem daybright;
-    MenuItem brightness;
-    MenuItem topmenu;
+MenuItem mi[30];
+
+MenuItem maxrpm;
+MenuItem autodim;
+MenuItem nightbright;
+MenuItem daybright;
+MenuItem brightness;
+MenuItem topmenu;
 
 void menuSetup()
 {
+    strcpy(mi[0].label, "SETTINGS");
+    mi[0].type = MENU_TYPE_MENU;
+    mi[0].menuItemsCount = 2;
+    mi[0].m[0] = 1;
+    mi[0].m[1] = 2;
+
+    strcpy(mi[1].label, "MAX RPM");
+    mi[1].type = MENU_TYPE_INT;
+    mi[1].intValueMin = 0;
+    mi[1].intValueMax = 20000;
+    mi[1].intValueDelta = 500;
+    mi[1].intValueCurrent = 0;
+
+    strcpy(mi[2].label, "BRIGHTNESS");
+    mi[2].type = MENU_TYPE_MENU;
+    mi[2].menuItemsCount = 3;
+    mi[2].m[0] = 3;
+    mi[2].m[1] = 4;
+    mi[2].m[2] = 5;
+
+    strcpy(mi[3].label, "AUTODIM");
+    mi[3].type = MENU_TYPE_MENU;
+    mi[3].menuItemsCount = 2;
+    mi[3].m[0] = 6;
+    mi[3].m[1] = 7;
+
     maxrpm.ID = 1;
     strcpy(maxrpm.label, "MAX RPM");
     maxrpm.parentID = 0;
     maxrpm.type = MENU_TYPE_INT;
+
     maxrpm.intValueMin = 0;
     maxrpm.intValueMax = 20000;
     maxrpm.intValueCurrent = 0;
@@ -90,6 +126,7 @@ void menuSetup()
     nightbright.intValueMin = 0;
     nightbright.intValueMax = 255;
     nightbright.intValueCurrent = 20;
+    nightbright.intValueDelta = 10;
 
     daybright.ID = 5;
     strcpy(daybright.label, "DAY");
@@ -98,6 +135,7 @@ void menuSetup()
     daybright.intValueMin = 0;
     daybright.intValueMax = 255;
     daybright.intValueCurrent = 150;
+    daybright.intValueDelta = 10;
 
     brightness.ID = 2;
     strcpy(brightness.label, "BRIGHTNESS");

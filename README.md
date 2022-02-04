@@ -26,30 +26,29 @@ A display device for CAN data.
 
 ## UX tree
 
-_This UX tree is from MODULAMP, for reference only_
-
-The UX is initially set to accept volume changes.
-
-* VOLUME
-  * 0...20
-* INPUT
-  * STREAM
-  * PHONO
-  * AUX
-
-_New UX tree for CANDISPLAY - exploration_
-
-* Home <ShowDefaultScreen()>
-* Max RPM (0...20000) -> Home ()
-* Info <ShowSplashScreen()> -> Home
-* Brightness
-  * Day (0...255) -> Brightness
-  * Night (0...255) -> Brightness
-  * Back -> Home
-* Autodim (Y/N) -> Home
-* Test
-  * RPM (0...7000) -> Test
-  * Strip <StripLaunch()> -> Test
-  * Back -> Home
-* Pattern (0...3) -> Home
-* Default (RPM) -> Home
+Home  <ShowDefaultScreen()>
+* Settings
+  * Info <ShowSplashScreen()>
+  * Max RPM (0...20000 step 500)
+  * Brightness
+    * Autodim
+      * Enabled
+      * Disabled
+    * Day (0...255 step 10)
+    * Night (0...255 step 10)
+    * Settings -> Settings
+  * Test
+    * RPM (0...20000 step 500)
+    * Strip <StripLaunch()>
+    * Settings -> Settings
+  * Display // this sets the info shown on the SSD1306 display
+    * Engine speed
+    * Vehicle speed
+    * Turbo RPM
+    * Turbo PSI
+    * (other turbo params)
+    * Settings -> Settings
+  * Pattern // this sets the patterns for the WS2812 LED strip
+    * ITA // (GREENx1/3, WHITEx1/3, REDx1/3, BLUE BLINKxALL)
+    * F1 // (GREENx1/3, YELLOWx1/3, BLUEx1/3, BLUE BLINKxALL)
+  * Exit -> Home
