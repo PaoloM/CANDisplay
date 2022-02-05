@@ -44,9 +44,9 @@ Home  <ShowDefaultScreen()>
   * Display // this sets the info shown on the SSD1306 display
     * Engine speed
     * Vehicle speed
-    * Turbo RPM
-    * Turbo PSI
-    * (other turbo params)
+    * ? Turbo RPM
+    * ? Turbo PSI
+    * ? (other turbo params)
     * Settings -> Settings
   * Pattern // this sets the patterns for the WS2812 LED strip
     * ITA // (GREENx1/3, WHITEx1/3, REDx1/3, BLUE BLINKxALL)
