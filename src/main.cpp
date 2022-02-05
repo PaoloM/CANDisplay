@@ -402,6 +402,56 @@ void LogCurrentMenuItem()
   log_out("CANDISPL", s);
 }
 
+void SaveCurrentValue(MenuItem m)
+{
+  Serial.print("SAVING:[");
+  Serial.print(m.label);
+  Serial.print("] value:");
+  if (m.type == MENU_TYPE_INT)
+    Serial.println(m.intValueCurrent);
+  else
+    Serial.println(m.setValue);
+  if (m.setValueID == MENU_VALUE_SHOW)
+  {
+    switch (m.setValue)
+    {
+    case MENU_VALUE_SHOW_INFO:
+      SSD1306_ShowSplashScreen();
+      break;
+    case MENU_VALUE_SHOW_HOME:
+      ON_SPLASH_SCREEN = false;
+      SSD1306_ShowDefaultScreen();
+      break;
+    }
+  }
+  else
+  {
+    switch (m.setValueID)
+    {
+    case MENU_VALUE_MAXRPM:
+      break;
+
+    case MENU_VALUE_BRIGHTNESS_DAY:
+      break;
+
+    case MENU_VALUE_BRIGHTNESS_NIGHT:
+      break;
+
+    case MENU_VALUE_BRIGHTNESS_AUTODIM:
+      break;
+
+    case MENU_VALUE_DISPLAY:
+      break;
+
+    default:
+      break;
+    }
+    ON_SPLASH_SCREEN = false;
+    SSD1306_ResetTimeout();
+    sensorUpdateDisplay();
+  }
+}
+
 // ------------------------------------------------------------------------------------------
 // Step 3b/7 - Read data from the sensor(s) on every loop
 // ------------------------------------------------------------------------------------------
@@ -414,120 +464,99 @@ void sensorUpdateReadingsQuick()
       switch (KY040_STATUS_CURRENT)
       {
       case KY040_STATUS_PRESSED:
-      {
+
         switch (currentMenu.type)
         {
         case MENU_TYPE_MENU:
-        {
-          LogCurrentMenuItem();
-          MenuItem *mi = currentMenu.m[currentMenu.menuValueCurrent];
-          currentMenu = *mi;
-        }
-        break;
+          currentMenu = mi[currentMenu.m[currentMenu.menuValueCurrent]];
+          if (currentMenu.type == MENU_TYPE_SELECT)
+          {
+            SaveCurrentValue(currentMenu);
+            currentMenu = mi[0]; // go to top of menu
+          }
+          if (currentMenu.setValueID != MENU_VALUE_SHOW)
+          {
+            sensorUpdateDisplay();
+            LogCurrentMenuItem();
+          }
+          break;
 
         case MENU_TYPE_INT:
-        {
+          SaveCurrentValue(currentMenu);
+          currentMenu = mi[0];
           LogCurrentMenuItem();
-          // TODO save the appropriate value
-          currentMenu = topmenu;
-        }
-        break;
 
-        case MENU_TYPE_TRUE_FALSE:
-        {
-        }
-        break;
+          ON_SPLASH_SCREEN = false;
+          SSD1306_ResetTimeout();
+          sensorUpdateDisplay();
+          break;
 
         default:
           break;
         }
-      }
-      
-      ON_SPLASH_SCREEN = false;
-      SSD1306_ResetTimeout();
-      sensorUpdateDisplay();
-      KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
-      break;
+
+        KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
+        break;
 
       case KY040_STATUS_GOINGUP:
-      {
+
         switch (currentMenu.type)
         {
         case MENU_TYPE_MENU:
-        {
-          LogCurrentMenuItem();
           if (currentMenu.menuValueCurrent < currentMenu.menuItemsCount - 1)
             currentMenu.menuValueCurrent++;
           else
             currentMenu.menuValueCurrent = 0;
-        }
-        break;
+          LogCurrentMenuItem();
+          break;
 
         case MENU_TYPE_INT:
-        {
-          LogCurrentMenuItem();
           if (currentMenu.intValueCurrent < currentMenu.intValueMax - currentMenu.intValueDelta)
             currentMenu.intValueCurrent += currentMenu.intValueDelta;
           else
             currentMenu.intValueCurrent = currentMenu.intValueMax;
-        }
-        break;
-
-        case MENU_TYPE_TRUE_FALSE:
-        {
-        }
-        break;
+          LogCurrentMenuItem();
+          break;
 
         default:
           break;
         }
-      }
-      
-      ON_SPLASH_SCREEN = false;
-      SSD1306_ResetTimeout();
-      sensorUpdateDisplay();
-      KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
-      break;
+
+        ON_SPLASH_SCREEN = false;
+        SSD1306_ResetTimeout();
+        sensorUpdateDisplay();
+        KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
+        break;
 
       case KY040_STATUS_GOINGDOWN:
-      {
+
         switch (currentMenu.type)
         {
         case MENU_TYPE_MENU:
-        {
-          LogCurrentMenuItem();
           if (currentMenu.menuValueCurrent > 0)
             currentMenu.menuValueCurrent--;
           else
             currentMenu.menuValueCurrent = currentMenu.menuItemsCount - 1;
-        }
-        break;
+          LogCurrentMenuItem();
+          break;
 
         case MENU_TYPE_INT:
-        {
-          LogCurrentMenuItem();
           if (currentMenu.intValueCurrent > currentMenu.intValueMin + currentMenu.intValueDelta)
             currentMenu.intValueCurrent -= currentMenu.intValueDelta;
           else
             currentMenu.intValueCurrent = currentMenu.intValueMin;
-        }
-        break;
-
-        case MENU_TYPE_TRUE_FALSE:
-        {
-        }
-        break;
+          LogCurrentMenuItem();
+          break;
 
         default:
           break;
         }
-      }
-      
-      ON_SPLASH_SCREEN = false;
-      SSD1306_ResetTimeout();
-      sensorUpdateDisplay();
-      KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
-      break;
+
+        ON_SPLASH_SCREEN = false;
+        SSD1306_ResetTimeout();
+        sensorUpdateDisplay();
+        KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
+        break;
 
       default:
         break;
@@ -535,91 +564,91 @@ void sensorUpdateReadingsQuick()
     }
     else
     {
-      switch (KY040_STATUS_CURRENT)
-      {
-      case KY040_STATUS_PRESSED:
-        log_out("CANDISPL", "button pressed");
-        // flip between states
-        switch (KNOB_MODE)
-        {
-        case KNOB_MODE_MENU: // select the current menu entry
-          KNOB_MODE = KNOB_MENU;
-          break;
-        case KNOB_MODE_INPUT: // select the input
-          KNOB_SELECTED_INPUT = KNOB_INPUT;
-          //        selectInput(KNOB_SELECTED_INPUT);
-          KNOB_MODE = KNOB_MODE_TESTRPM; // go directly to volume
-          break;
-        case KNOB_MODE_TESTRPM: // go back to the menu
-          KNOB_MODE = KNOB_MODE_MENU;
-          break;
-        default:
-          break;
-        }
+      // switch (KY040_STATUS_CURRENT)
+      // {
+      // case KY040_STATUS_PRESSED:
+      //   log_out("CANDISPL", "button pressed");
+      //   // flip between states
+      //   switch (KNOB_MODE)
+      //   {
+      //   case KNOB_MODE_MENU: // select the current menu entry
+      //     KNOB_MODE = KNOB_MENU;
+      //     break;
+      //   case KNOB_MODE_INPUT: // select the input
+      //     KNOB_SELECTED_INPUT = KNOB_INPUT;
+      //     //        selectInput(KNOB_SELECTED_INPUT);
+      //     KNOB_MODE = KNOB_MODE_TESTRPM; // go directly to volume
+      //     break;
+      //   case KNOB_MODE_TESTRPM: // go back to the menu
+      //     KNOB_MODE = KNOB_MODE_MENU;
+      //     break;
+      //   default:
+      //     break;
+      //   }
 
-        ON_SPLASH_SCREEN = false;
-        SSD1306_ResetTimeout();
-        sensorUpdateDisplay();
-        KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
-        break;
+      //   ON_SPLASH_SCREEN = false;
+      //   SSD1306_ResetTimeout();
+      //   sensorUpdateDisplay();
+      //   KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
+      //   break;
 
-      case KY040_STATUS_GOINGUP:
-        log_out("CANDISPL", "knob up");
-        switch (KNOB_MODE)
-        {
-        case KNOB_MODE_MENU: // move to the next menu entry
-          if (++KNOB_MENU > KNOB_MODE_MENU_MAX)
-            KNOB_MENU = KNOB_MODE_MENU_MIN;
-          break;
-        case KNOB_MODE_INPUT: // move to the next input
-          if (++KNOB_INPUT > KNOB_MODE_INPUT_MAX)
-            KNOB_INPUT = KNOB_MODE_INPUT_MIN;
-          break;
-        case KNOB_MODE_TESTRPM: // increment the volume
-          if (KNOB_VALUE < CAN_RPM_MAX)
-            KNOB_VALUE += CAN_TESTRPM_DELTA;
-          // setVolume(KNOB_VALUE);
-          break;
-        default:
-          break;
-        }
+      // case KY040_STATUS_GOINGUP:
+      //   log_out("CANDISPL", "knob up");
+      //   switch (KNOB_MODE)
+      //   {
+      //   case KNOB_MODE_MENU: // move to the next menu entry
+      //     if (++KNOB_MENU > KNOB_MODE_MENU_MAX)
+      //       KNOB_MENU = KNOB_MODE_MENU_MIN;
+      //     break;
+      //   case KNOB_MODE_INPUT: // move to the next input
+      //     if (++KNOB_INPUT > KNOB_MODE_INPUT_MAX)
+      //       KNOB_INPUT = KNOB_MODE_INPUT_MIN;
+      //     break;
+      //   case KNOB_MODE_TESTRPM: // increment the volume
+      //     if (KNOB_VALUE < CAN_RPM_MAX)
+      //       KNOB_VALUE += CAN_TESTRPM_DELTA;
+      //     // setVolume(KNOB_VALUE);
+      //     break;
+      //   default:
+      //     break;
+      //   }
 
-        ON_SPLASH_SCREEN = false;
-        SSD1306_ResetTimeout();
-        sensorUpdateDisplay();
-        KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
-        break;
+      //   ON_SPLASH_SCREEN = false;
+      //   SSD1306_ResetTimeout();
+      //   sensorUpdateDisplay();
+      //   KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
+      //   break;
 
-      case KY040_STATUS_GOINGDOWN:
-        log_out("CANDISPL", "knob down");
-        switch (KNOB_MODE)
-        {
-        case KNOB_MODE_MENU: // move to the prev menu entry
-          if (--KNOB_MENU < KNOB_MODE_MENU_MIN)
-            KNOB_MENU = KNOB_MODE_MENU_MAX;
-          break;
-        case KNOB_MODE_INPUT: // move to the prev input
-          if (--KNOB_INPUT < KNOB_MODE_INPUT_MIN)
-            KNOB_INPUT = KNOB_MODE_INPUT_MAX;
-          break;
-        case KNOB_MODE_TESTRPM: // decrement the volume
-          if (KNOB_VALUE > CAN_RPM_MIN)
-            KNOB_VALUE -= CAN_TESTRPM_DELTA;
-          // setVolume(KNOB_VALUE);
-          break;
-        default:
-          break;
-        }
+      // case KY040_STATUS_GOINGDOWN:
+      //   log_out("CANDISPL", "knob down");
+      //   switch (KNOB_MODE)
+      //   {
+      //   case KNOB_MODE_MENU: // move to the prev menu entry
+      //     if (--KNOB_MENU < KNOB_MODE_MENU_MIN)
+      //       KNOB_MENU = KNOB_MODE_MENU_MAX;
+      //     break;
+      //   case KNOB_MODE_INPUT: // move to the prev input
+      //     if (--KNOB_INPUT < KNOB_MODE_INPUT_MIN)
+      //       KNOB_INPUT = KNOB_MODE_INPUT_MAX;
+      //     break;
+      //   case KNOB_MODE_TESTRPM: // decrement the volume
+      //     if (KNOB_VALUE > CAN_RPM_MIN)
+      //       KNOB_VALUE -= CAN_TESTRPM_DELTA;
+      //     // setVolume(KNOB_VALUE);
+      //     break;
+      //   default:
+      //     break;
+      //   }
 
-        ON_SPLASH_SCREEN = false;
-        SSD1306_ResetTimeout();
-        sensorUpdateDisplay();
-        KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
-        break;
+      //   ON_SPLASH_SCREEN = false;
+      //   SSD1306_ResetTimeout();
+      //   sensorUpdateDisplay();
+      //   KY040_STATUS_CURRENT = KY040_STATUS_IDLE;
+      //   break;
 
-      default:
-        break;
-      }
+      // default:
+      //   break;
+      // }
     }
   }
 
@@ -753,7 +782,7 @@ void sensorUpdateDisplay()
           case MENU_TYPE_MENU:
           {
             u8g2.setFont(FONT_BODY);
-            u8g2.drawStr(0, 40, currentMenu.m[currentMenu.menuValueCurrent]->label);
+            u8g2.drawStr(0, 40, mi[currentMenu.m[currentMenu.menuValueCurrent]].label);
           }
           break;
 
