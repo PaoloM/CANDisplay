@@ -1,11 +1,8 @@
 // ==========================================================================================
 // CANDISPLAY - a CANBUS display device
 // main.cpp
-
-#pragma GCC diagnostic ignored "-Wwrite-strings"
-#pragma GCC diagnostic ignored "-Wunknown-pragmas"
-
-#pragma region MIT License
+//
+// MIT License
 //
 // Copyright (c) 2020-2022 Paolo Marcucci
 //
@@ -26,11 +23,18 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-#pragma endregion
+// ==========================================================================================
+
+#pragma GCC diagnostic ignored "-Wwrite-strings"
 
 #define SENSOR_TYPE "CANDISPLAY" // type of sensor (keep it uppercase for display compatibility)
 #define VERSION "0.1"            // firmware version
 #define MAIN_TOPIC "candisplay"  // default MQTT topic (can be empty, typically lowercase)
+
+#define VALUE_COUNT 30
+
+int v[VALUE_COUNT];
+char l[VALUE_COUNT][20];
 
 #include "main.h"
 
@@ -39,7 +43,7 @@
 // - SSD1306 Fonts
 #define FONT_HEADER u8g2_font_logisoso16_tf
 #define FONT_LARGE u8g2_font_logisoso38_tf
-#define FONT_BODY u8g2_font_logisoso20_tf
+#define FONT_BODY u8g2_font_logisoso18_tf
 
 // - KY040 knob values
 #define KNOB_MODE_MENU 0
@@ -57,8 +61,6 @@ int KNOB_MODE_MENU_MIN = 1;
 int KNOB_MODE_INPUT_MAX = 2;
 int KNOB_MODE_INPUT_MIN = 0;
 
-int KNOB_MODE = KNOB_MODE_TESTRPM;
-
 int KNOB_MENU = KNOB_MODE_TESTRPM;
 int KNOB_INPUT = KNOB_INPUT_STREAM;
 int KNOB_SELECTED_INPUT = KNOB_INPUT;
@@ -66,17 +68,9 @@ int KNOB_VALUE = 0;
 
 boolean KNOB_BUTTON_PRESSED = false;
 
-// - CANDISPLAY default values
-int CAN_RPM_MAX = 7000;
-int CAN_RPM_MIN = 0;
-int CAN_TESTRPM_DELTA = 500;
-
 // - DHTxx values
 float DHT_TEMPERATURE;
 float DHT_HUMIDITY;
-
-// TODO: add global variables here
-int addr = 0;
 
 // - WS2812 values
 uint32_t color_red = strip.Color(255, 0, 0);
@@ -87,15 +81,20 @@ uint32_t color_blue = strip.Color(0, 0, 255);
 uint32_t color_black = strip.Color(0, 0, 0);
 int rangedvalue = 0;
 int first_third_max = WS2812_NUMPIXELS / 3;
-int second_third_max = first_third_max * 2;
-int WS2812_EXTRAPIXEL_1 = WS2812_NUMPIXELS + 1;
-int WS2812_EXTRAPIXEL_2 = WS2812_NUMPIXELS + 2;
-int WS2812_EXTRAPIXEL_3 = WS2812_NUMPIXELS + 3;
+int second_third_max = WS2812_NUMPIXELS - first_third_max; // to avoid skipping the last LED due to a rounding error
+int WS2812_EXTRAPIXEL_1 = WS2812_NUMPIXELS + 1; // optional
+int WS2812_EXTRAPIXEL_2 = WS2812_NUMPIXELS + 2; // optional
+int WS2812_EXTRAPIXEL_3 = WS2812_NUMPIXELS + 3; // optional
 
-// MQTT sensor specific topics to report values ---------------------------------------------
+// - MQTT sensor specific topics to report values 
 char input_mqtt_topic[50];
 char volume_mqtt_topic[50];
 char temperature_mqtt_topic[50];
+
+// TODO: add global variables here
+int addr = 0;
+int currentDisplay = 0;
+
 
 // ==========================================================================================
 //
@@ -206,13 +205,15 @@ void SSD1306_ShowDefaultScreen()
   char s[20];
 
   u8g2.clearBuffer();
+
   u8g2.setFont(FONT_HEADER);
-  sprintf(s, "%s", STR_CANDISPLAY_MENU_RPM);
+  sprintf(s, "%s", l[v[CURRENT_DISPLAY]]);
   u8g2.drawStr(0, 16, s);
 
   u8g2.setFont(FONT_LARGE);
-  sprintf(s, "%d", KNOB_VALUE);
+  sprintf(s, "%d", v[v[CURRENT_DISPLAY]]);
   u8g2.drawStr(0, 63, s);
+
   u8g2.sendBuffer();
 }
 
@@ -268,11 +269,6 @@ void sensorSetup()
     pinMode(KY040_PIN_IN2, INPUT_PULLUP);
     pinMode(KY040_PIN_BUTTON, INPUT);
     pinMode(KY040_PIN_BUTTON, INPUT_PULLUP);
-
-    /* code */
-    KNOB_MODE = KNOB_MODE_TESTRPM; // TODO set the initial mode for the knob to control
-    // KNOB_VALUE = RetrieveState();
-    // KNOB_INPUT = getInput();
   }
 
   if (SENSOR_BMP280) // - BMP280 TEMPERATURE, ALTITUDE, PRESSURE SENSOR
@@ -296,7 +292,13 @@ void sensorSetup()
   if (SENSOR_WS2812) // - WS2812 RGB LED STRIP
   {
     strip.begin();
-    strip.setBrightness(30); // TODO get the brightness from EEPROM
+    
+    Serial.print("Current brightness [");
+    Serial.print(CURRENT_BRIGHTNESS);
+    Serial.print("] = ");
+    Serial.println(v[CURRENT_BRIGHTNESS]);
+
+    strip.setBrightness(v[v[CURRENT_BRIGHTNESS]]); // TODO get the brightness from EEPROM
     strip.show();            // Initialize all pixels to 'off'
     StripLaunch();
   }
@@ -329,6 +331,10 @@ void sensorUpdateReadings()
   // Saving status to EEPROM
   // SaveState(KNOB_VALUE);
   // saveInput(KNOB_SELECTED_INPUT);
+
+  v[CURRENT_ENGINE_SPEED] += 500;
+  if (v[CURRENT_ENGINE_SPEED] > v[PARAM_MAXRPM])
+    v[CURRENT_ENGINE_SPEED] = 0;
 
   if (SENSOR_DHT) // - DHTxx TEMPERATURE AND HUMIDITY SENSOR
   {
@@ -396,24 +402,17 @@ void LogCurrentMenuItem()
 
   sprintf(s, "Action:[%d] Label:[%s] Type:[%d] menuItemCurrent:[%d] intValueCurrent:[%d]",
           KY040_STATUS_CURRENT,
-          currentMenu.label, currentMenu.type,
-          currentMenu.menuValueCurrent,
-          currentMenu.intValueCurrent);
+          mi[currentMenu].label, mi[currentMenu].type,
+          mi[currentMenu].menuValueCurrent,
+          mi[currentMenu].intValueCurrent);
   log_out("CANDISPL", s);
 }
 
-void SaveCurrentValue(MenuItem m)
+void SaveCurrentValue(int m)
 {
-  Serial.print("SAVING:[");
-  Serial.print(m.label);
-  Serial.print("] value:");
-  if (m.type == MENU_TYPE_INT)
-    Serial.println(m.intValueCurrent);
-  else
-    Serial.println(m.setValue);
-  if (m.setValueID == MENU_VALUE_SHOW)
+  if (mi[m].setValueID == VALUE_SHOW)
   {
-    switch (m.setValue)
+    switch (mi[m].intValueCurrent)
     {
     case MENU_VALUE_SHOW_INFO:
       SSD1306_ShowSplashScreen();
@@ -426,26 +425,17 @@ void SaveCurrentValue(MenuItem m)
   }
   else
   {
-    switch (m.setValueID)
+    v[mi[m].setValueID] = mi[m].intValueCurrent;
+
+    for (int i = 0; i < 15; i++)
     {
-    case MENU_VALUE_MAXRPM:
-      break;
-
-    case MENU_VALUE_BRIGHTNESS_DAY:
-      break;
-
-    case MENU_VALUE_BRIGHTNESS_NIGHT:
-      break;
-
-    case MENU_VALUE_BRIGHTNESS_AUTODIM:
-      break;
-
-    case MENU_VALUE_DISPLAY:
-      break;
-
-    default:
-      break;
+      Serial.print(i);
+      Serial.print(":[");
+      Serial.print(l[i]);
+      Serial.print("] = ");
+      Serial.println(v[i]);
     }
+
     ON_SPLASH_SCREEN = false;
     SSD1306_ResetTimeout();
     sensorUpdateDisplay();
@@ -465,16 +455,17 @@ void sensorUpdateReadingsQuick()
       {
       case KY040_STATUS_PRESSED:
 
-        switch (currentMenu.type)
+        switch (mi[currentMenu].type)
         {
         case MENU_TYPE_MENU:
-          currentMenu = mi[currentMenu.m[currentMenu.menuValueCurrent]];
-          if (currentMenu.type == MENU_TYPE_SELECT)
+          Serial.println("Pressed menu");
+          currentMenu = mi[currentMenu].m[mi[currentMenu].menuValueCurrent];
+          if (mi[currentMenu].type == MENU_TYPE_SELECT)
           {
             SaveCurrentValue(currentMenu);
-            currentMenu = mi[0]; // go to top of menu
+            currentMenu = 0; // go to top of menu
           }
-          if (currentMenu.setValueID != MENU_VALUE_SHOW)
+          if (mi[currentMenu].setValueID != VALUE_SHOW)
           {
             sensorUpdateDisplay();
             LogCurrentMenuItem();
@@ -482,9 +473,10 @@ void sensorUpdateReadingsQuick()
           break;
 
         case MENU_TYPE_INT:
+          Serial.println("Pressed int");
           SaveCurrentValue(currentMenu);
-          currentMenu = mi[0];
           LogCurrentMenuItem();
+          currentMenu = 0;
 
           ON_SPLASH_SCREEN = false;
           SSD1306_ResetTimeout();
@@ -500,21 +492,21 @@ void sensorUpdateReadingsQuick()
 
       case KY040_STATUS_GOINGUP:
 
-        switch (currentMenu.type)
+        switch (mi[currentMenu].type)
         {
         case MENU_TYPE_MENU:
-          if (currentMenu.menuValueCurrent < currentMenu.menuItemsCount - 1)
-            currentMenu.menuValueCurrent++;
+          if (mi[currentMenu].menuValueCurrent < mi[currentMenu].menuItemsCount - 1)
+            mi[currentMenu].menuValueCurrent++;
           else
-            currentMenu.menuValueCurrent = 0;
+            mi[currentMenu].menuValueCurrent = 0;
           LogCurrentMenuItem();
           break;
 
         case MENU_TYPE_INT:
-          if (currentMenu.intValueCurrent < currentMenu.intValueMax - currentMenu.intValueDelta)
-            currentMenu.intValueCurrent += currentMenu.intValueDelta;
+          if (mi[currentMenu].intValueCurrent < mi[currentMenu].intValueMax - mi[currentMenu].intValueDelta)
+            mi[currentMenu].intValueCurrent += mi[currentMenu].intValueDelta;
           else
-            currentMenu.intValueCurrent = currentMenu.intValueMax;
+            mi[currentMenu].intValueCurrent = mi[currentMenu].intValueMax;
           LogCurrentMenuItem();
           break;
 
@@ -530,21 +522,21 @@ void sensorUpdateReadingsQuick()
 
       case KY040_STATUS_GOINGDOWN:
 
-        switch (currentMenu.type)
+        switch (mi[currentMenu].type)
         {
         case MENU_TYPE_MENU:
-          if (currentMenu.menuValueCurrent > 0)
-            currentMenu.menuValueCurrent--;
+          if (mi[currentMenu].menuValueCurrent > 0)
+            mi[currentMenu].menuValueCurrent--;
           else
-            currentMenu.menuValueCurrent = currentMenu.menuItemsCount - 1;
+            mi[currentMenu].menuValueCurrent = mi[currentMenu].menuItemsCount - 1;
           LogCurrentMenuItem();
           break;
 
         case MENU_TYPE_INT:
-          if (currentMenu.intValueCurrent > currentMenu.intValueMin + currentMenu.intValueDelta)
-            currentMenu.intValueCurrent -= currentMenu.intValueDelta;
+          if (mi[currentMenu].intValueCurrent > mi[currentMenu].intValueMin + mi[currentMenu].intValueDelta)
+            mi[currentMenu].intValueCurrent -= mi[currentMenu].intValueDelta;
           else
-            currentMenu.intValueCurrent = currentMenu.intValueMin;
+            mi[currentMenu].intValueCurrent = mi[currentMenu].intValueMin;
           LogCurrentMenuItem();
           break;
 
@@ -662,16 +654,16 @@ void sensorUpdateReadingsQuick()
 
     uint32_t color;
 
-    rangedvalue = (int)((float)(KNOB_VALUE * (float)WS2812_NUMPIXELS) / (float)CAN_RPM_MAX);
+    rangedvalue = (int)((float)(v[CURRENT_ENGINE_SPEED] * (float)WS2812_NUMPIXELS) / (float)v[PARAM_MAXRPM]);
 
-    if (KNOB_VALUE == CAN_RPM_MAX) // Shift pattern display
+    if (v[CURRENT_ENGINE_SPEED] == v[PARAM_MAXRPM]) // Shift pattern display
     {
-      strip.setBrightness(200);
+      strip.setBrightness(v[v[CURRENT_BRIGHTNESS]]);
       StripFullBlink(100, color_blue);
     }
     else
     {
-      strip.setBrightness(30);
+      strip.setBrightness(v[v[CURRENT_BRIGHTNESS]]);
       for (int i = 0; i < WS2812_NUMPIXELS; i++) // regular RPM display
       {
         if (i < first_third_max)
@@ -686,7 +678,7 @@ void sensorUpdateReadingsQuick()
         else
           strip.setPixelColor(i, color_black);
       }
-      if (KNOB_VALUE == CAN_RPM_MIN)
+      if (v[CURRENT_ENGINE_SPEED] == v[VALUE_MINRPM])
         strip.clear();
       strip.show();
     }
@@ -771,25 +763,26 @@ void sensorUpdateDisplay()
       {
         char s[20];
         u8g2.clearBuffer();
+
         if (USE_MENU)
         {
           u8g2.setFont(FONT_HEADER);
-          sprintf(s, "%s", currentMenu.label);
+          sprintf(s, "%s", mi[currentMenu].label);
           u8g2.drawStr(0, 16, s);
 
-          switch (currentMenu.type)
+          switch (mi[currentMenu].type)
           {
           case MENU_TYPE_MENU:
           {
             u8g2.setFont(FONT_BODY);
-            u8g2.drawStr(0, 40, mi[currentMenu.m[currentMenu.menuValueCurrent]].label);
+            u8g2.drawStr(0, 40, mi[mi[currentMenu].m[mi[currentMenu].menuValueCurrent]].label);
           }
           break;
 
           case MENU_TYPE_INT:
           {
             u8g2.setFont(FONT_LARGE);
-            sprintf(s, "%d", currentMenu.intValueCurrent);
+            sprintf(s, "%d", mi[currentMenu].intValueCurrent);
             u8g2.drawStr(0, 63, s);
           }
           break;
@@ -798,67 +791,7 @@ void sensorUpdateDisplay()
             break;
           }
         } // end of new unified menu system
-        else
-        {
-          switch (KNOB_MODE)
-          {
-          case KNOB_MODE_MENU:
-            u8g2.setFont(FONT_HEADER);
-            sprintf(s, "%s", STR_CANDISPLAY_MENU_HEADER);
-            u8g2.drawStr(0, 16, s);
 
-            u8g2.setFont(FONT_BODY);
-            switch (KNOB_MENU)
-            {
-            case KNOB_MODE_INPUT:
-              sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT);
-              break;
-            case KNOB_MODE_TESTRPM:
-              sprintf(s, "%s", STR_CANDISPLAY_MENU_TESTRPM);
-              break;
-            }
-            u8g2.drawStr(0, 60, s);
-            break;
-
-          case KNOB_MODE_INPUT:
-            u8g2.setFont(FONT_HEADER);
-            sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT);
-            u8g2.drawStr(0, 16, s);
-
-            u8g2.setFont(FONT_BODY);
-            switch (KNOB_INPUT)
-            {
-            case KNOB_INPUT_BACK:
-              sprintf(s, "%s", "MENU"); // TODO - is this even a valid state?
-              break;
-            case KNOB_INPUT_STREAM:
-              sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT_STREAM);
-              break;
-            case KNOB_INPUT_LINE1:
-              sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT_LINE1);
-              break;
-            case KNOB_INPUT_LINE2:
-              sprintf(s, "%s", STR_CANDISPLAY_MENU_INPUT_LINE2);
-              break;
-            }
-            u8g2.drawStr(0, 60, s);
-            break;
-
-          case KNOB_MODE_TESTRPM:
-            u8g2.setFont(FONT_HEADER);
-            //            sprintf(s, "%s", STR_CANDISPLAY_MENU_TESTRPM);
-            sprintf(s, "%s", currentMenu.label);
-            u8g2.drawStr(0, 16, s);
-
-            u8g2.setFont(FONT_LARGE);
-            sprintf(s, "%d", KNOB_VALUE);
-            u8g2.drawStr(0, 63, s);
-            break;
-
-          default:
-            break;
-          }
-        } // - end of old menu system
         u8g2.sendBuffer();
       }
 

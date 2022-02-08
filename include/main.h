@@ -1,8 +1,8 @@
 // ==========================================================================================
 // CANDISPLAY - a CANBUS display device
 // main.h
-
-#pragma region // MIT License
+//
+// MIT License
 //
 // Copyright (c) 2020-2022 Paolo Marcucci
 //
@@ -23,7 +23,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-#pragma endregion
+// ==========================================================================================
 
 #include <Arduino.h>
 
@@ -117,7 +117,6 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, WS2812_PIN,
 
 /*--------------------------- Utility functions  ----------------------------*/
 
-#pragma region Logging funtions
 void log_out(char *component, const char *value)
 {
   if (DEBUG)
@@ -159,9 +158,8 @@ void sendToMqttTopicAndValue(char *topic, String value)
     MQTT_CLIENT.publish(topic, buffer);
   }
 }
-#pragma endregion
 
-#pragma region KY-040 debouncing: A valid CW or CCW move returns 1, invalid returns 0.
+//  KY-040 debouncing: A valid CW or CCW move returns 1, invalid returns 0.
 int8_t read_rotary()
 {
   static int8_t rot_enc_table[] = {0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0};
@@ -187,9 +185,8 @@ int8_t read_rotary()
   }
   return 0;
 }
-#pragma endregion
 
-#pragma region WS2812 functions
+// WS2812 functions
 // Input a value 0 to 255 to get a color value.
 // The colours are a transition r - g - b - back to r.
 uint32_t Wheel(byte WheelPos) {
@@ -274,7 +271,6 @@ void theaterChaseRainbow(uint8_t wait) {
     }
   }
 }
-#pragma endregion
 
 /*--------------------------- MQTT ---------------------------------------*/
 void mqttSetup()
@@ -439,6 +435,7 @@ void setup()
   mqttSetup();
   sensorSetup();
   sensorMqttSetup();
+  valuesSetup();
   menuSetup();
 }
 

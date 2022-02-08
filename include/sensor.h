@@ -1,8 +1,8 @@
 // ==========================================================================================
 // CANDISPLAY - a CANBUS display device
 // sensor.h
-
-#pragma region // MIT License
+//
+// MIT License
 //
 // Copyright (c) 2020-2022 Paolo Marcucci
 //
@@ -23,7 +23,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-#pragma endregion
+// ==========================================================================================
 
 ///////////////////////////////// SSD1306 I2C OLED DISPLAY //////////////////////////////////
 // Default connections in I2C are SCL -> D1 and SDA -> D2, 3.3v to VCC
