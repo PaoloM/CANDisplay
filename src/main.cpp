@@ -82,11 +82,11 @@ uint32_t color_black = strip.Color(0, 0, 0);
 int rangedvalue = 0;
 int first_third_max = WS2812_NUMPIXELS / 3;
 int second_third_max = WS2812_NUMPIXELS - first_third_max; // to avoid skipping the last LED due to a rounding error
-int WS2812_EXTRAPIXEL_1 = WS2812_NUMPIXELS + 1; // optional
-int WS2812_EXTRAPIXEL_2 = WS2812_NUMPIXELS + 2; // optional
-int WS2812_EXTRAPIXEL_3 = WS2812_NUMPIXELS + 3; // optional
+int WS2812_EXTRAPIXEL_1 = WS2812_NUMPIXELS + 1;            // optional
+int WS2812_EXTRAPIXEL_2 = WS2812_NUMPIXELS + 2;            // optional
+int WS2812_EXTRAPIXEL_3 = WS2812_NUMPIXELS + 3;            // optional
 
-// - MQTT sensor specific topics to report values 
+// - MQTT sensor specific topics to report values
 char input_mqtt_topic[50];
 char volume_mqtt_topic[50];
 char temperature_mqtt_topic[50];
@@ -94,7 +94,6 @@ char temperature_mqtt_topic[50];
 // TODO: add global variables here
 int addr = 0;
 int currentDisplay = 0;
-
 
 // ==========================================================================================
 //
@@ -131,12 +130,12 @@ void RetrieveState()
 
 void StripFullBlink(int interval, uint32_t color)
 {
-  static long prevMill = 0; //prevMill stores last time Led blinked
+  static long prevMill = 0; // prevMill stores last time Led blinked
   static uint32_t prevColor = color_black;
 
   if (((long)millis() - prevMill) >= interval)
   {
-    prevMill = millis(); //stores current value of millis()
+    prevMill = millis(); // stores current value of millis()
     if (prevColor == color_black)
       prevColor = color;
     else
@@ -229,18 +228,18 @@ void sensorSetup()
     RetrieveState();
   }
 
-  if (SENSOR_SSD1306) // - SSD1306 I2C OLED DISPLAY
+  if (SENSOR_SSD1306)   // - SSD1306 I2C OLED DISPLAY
   {
     u8g2.begin();
     SSD1306_ShowSplashScreen();
   }
 
-  if (SENSOR_DHT) // - DHTxx TEMPERATURE AND HUMIDITY SENSOR
+  if (SENSOR_DHT)       // - DHTxx TEMPERATURE AND HUMIDITY SENSOR
   {
     dht.begin();
   }
 
-  if (SENSOR_HD74480) // - HD77480 16x2 LCD DISPLAY
+  if (SENSOR_HD74480)   // - HD77480 16x2 LCD DISPLAY
   {
     char client_id[20];
 
@@ -261,7 +260,7 @@ void sensorSetup()
     ON_SPLASH_SCREEN = true;
   }
 
-  if (SENSOR_KY040) // - KY040 ROTARY ENCODER
+  if (SENSOR_KY040)     // - KY040 ROTARY ENCODER
   {
     pinMode(KY040_PIN_IN1, INPUT);
     pinMode(KY040_PIN_IN1, INPUT_PULLUP);
@@ -271,7 +270,7 @@ void sensorSetup()
     pinMode(KY040_PIN_BUTTON, INPUT_PULLUP);
   }
 
-  if (SENSOR_BMP280) // - BMP280 TEMPERATURE, ALTITUDE, PRESSURE SENSOR
+  if (SENSOR_BMP280)    // - BMP280 TEMPERATURE, ALTITUDE, PRESSURE SENSOR
   {                  // TODO - make sure that this initialization works!
     if (!bmp.begin(BMP280_PIN_SCL, BMP280_PIN_SDA))
     {
@@ -289,18 +288,36 @@ void sensorSetup()
                     Adafruit_BMP280::STANDBY_MS_500); /* Standby time. */
   }
 
-  if (SENSOR_WS2812) // - WS2812 RGB LED STRIP
+  if (SENSOR_WS2812)    // - WS2812 RGB LED STRIP
   {
     strip.begin();
-    
+
     Serial.print("Current brightness [");
     Serial.print(CURRENT_BRIGHTNESS);
     Serial.print("] = ");
     Serial.println(v[CURRENT_BRIGHTNESS]);
 
-    strip.setBrightness(v[v[CURRENT_BRIGHTNESS]]); // TODO get the brightness from EEPROM
-    strip.show();            // Initialize all pixels to 'off'
+    strip.setBrightness(v[v[CURRENT_BRIGHTNESS]]);
+    strip.show(); // Initialize all pixels to 'off'
     StripLaunch();
+  }
+
+  if (SENSOR_MCP2515)   // - MCP2515 CAN BUS CONTROLLER
+  {
+    SPI.begin();
+//SPISettings mySettting(speedMaximum, dataOrder, dataMode)
+SPI.beginTransaction(SPISettings(5000000, MSBFIRST, SPI_MODE3));
+
+// Initialize MCP2515 running at 16MHz with a baudrate of 500kb/s and the masks and filters disabled.
+byte res = CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_8MHZ);
+if (res == CAN_OK)
+  Serial.println("MCP2515 Initialized Successfully!");
+else
+  Serial.println("Error Initializing MCP2515. Error code:" + String(res));
+
+CAN0.setMode(MCP_NORMAL); // Set operation mode to normal so the MCP2515 sends acks to received data.
+
+pinMode(CAN0_INT, INPUT); // Configuring pin for /INT input
   }
 
   // TODO: Add other sensor-specific initialization code here
@@ -646,17 +663,11 @@ void sensorUpdateReadingsQuick()
 
   if (SENSOR_WS2812)
   {
-    // The full range of LEDs on the strip is divided in three equal parts:
-    //  1. KNOB_MODE_RPM_MIN to KNOB_MODE_RPM_MAX/3 :
-    //  2. KNOB_MODE_RPM_MAX/3 to KNOB_MODE_RPM_MAX/3*2 :
-    //  3. KNOB_MODE_RPM_MAX/3*2 to KNOB_MODE_RPM_MAX :
-    // Shift indicator blinks all LEDs blue when it reaches KNOB_MODE_RPM_MAX
-
     uint32_t color;
 
     rangedvalue = (int)((float)(v[CURRENT_ENGINE_SPEED] * (float)WS2812_NUMPIXELS) / (float)v[PARAM_MAXRPM]);
 
-    if (v[CURRENT_ENGINE_SPEED] == v[PARAM_MAXRPM]) // Shift pattern display
+    if (v[CURRENT_ENGINE_SPEED] >= v[PARAM_MAXRPM]) // Shift pattern display
     {
       strip.setBrightness(v[v[CURRENT_BRIGHTNESS]]);
       StripFullBlink(100, color_blue);

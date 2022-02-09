@@ -87,23 +87,24 @@ bool inMenu = true;
 #define PARAM_BRIGHTNESSNIGHT                        9
 #define VALUE_TEST                                  10 /* ? */
 #define VALUE_TEST_LED                              11 /* ? */
-#define VALUE_MINRPM                                12 /* ? */
+#define VALUE_MINRPM                                12 /* typically 0 */
 #define VALUE_SHOW                                  13 /* ? */
 
 
 void valuesSetup()
 {
     // setup values
-    v[CURRENT_ENGINE_SPEED] = 5000;                             strcpy(l[CURRENT_ENGINE_SPEED], "ENGINE RPM");
-    v[CURRENT_VEHICLE_SPEED] = 0;                               strcpy(l[CURRENT_VEHICLE_SPEED], "VEHICLE MPH");
-    //v[PARAM_AUTODIM] = 0;                                     strcpy(l[PARAM_AUTODIM], "AUTODIM");
-    v[PARAM_BRIGHTNESSDAY] = 80;                             strcpy(l[PARAM_BRIGHTNESSDAY], "BRIGHT.DAY");
-    v[PARAM_BRIGHTNESSNIGHT] = 10;                            strcpy(l[PARAM_BRIGHTNESSNIGHT], "BRIGHT.NIGHT");
-    v[CURRENT_DISPLAY] = CURRENT_ENGINE_SPEED;            strcpy(l[CURRENT_DISPLAY], "CURR.DISPLAY");
-    v[PARAM_MAXRPM] = 7000;                                   strcpy(l[PARAM_MAXRPM], "MAX.RPM");
-    v[VALUE_MINRPM] = 0;                                      strcpy(l[VALUE_MINRPM], "MIN.RPM");
+    // TODO get the parameters from EEPROM
+    v[CURRENT_ENGINE_SPEED] = 5000;                   strcpy(l[CURRENT_ENGINE_SPEED], "ENGINE RPM");
+    v[CURRENT_VEHICLE_SPEED] = 0;                     strcpy(l[CURRENT_VEHICLE_SPEED], "VEHICLE MPH");
+    //v[PARAM_AUTODIM] = 0;                             strcpy(l[PARAM_AUTODIM], "AUTODIM");
+    v[PARAM_BRIGHTNESSDAY] = 30;                      strcpy(l[PARAM_BRIGHTNESSDAY], "BRIGHT.DAY");
+    v[PARAM_BRIGHTNESSNIGHT] = 10;                    strcpy(l[PARAM_BRIGHTNESSNIGHT], "BRIGHT.NIGHT");
+    v[CURRENT_DISPLAY] = CURRENT_ENGINE_SPEED;        strcpy(l[CURRENT_DISPLAY], "CURR.DISPLAY");
+    v[PARAM_MAXRPM] = 7000;                           strcpy(l[PARAM_MAXRPM], "MAX.RPM");
+    v[VALUE_MINRPM] = 0;                              strcpy(l[VALUE_MINRPM], "MIN.RPM");
     v[CURRENT_BRIGHTNESS] = PARAM_BRIGHTNESSDAY;      strcpy(l[CURRENT_BRIGHTNESS], "CURR.BRIGHT");
-    v[VALUE_SHOW] = MENU_VALUE_SHOW_INFO;                     strcpy(l[VALUE_SHOW], "SHOW");
+    v[VALUE_SHOW] = MENU_VALUE_SHOW_INFO;             strcpy(l[VALUE_SHOW], "SHOW");
 }
 void menuSetup()
 {

@@ -43,13 +43,13 @@
 #include <WiFiManager.h>      // Required for AP support by tzapu/WiFiManager^0.16.0
 
 // Framework dependencies
-#include <ESP8266WiFi.h> // ESP8266 WiFi driver
+#include <ESP8266WiFi.h>      // ESP8266 WiFi driver
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
-#include <ArduinoOTA.h> // Required for OTA updates
+#include <ArduinoOTA.h>       // Required for OTA updates
 #include <Wire.h>
-#include <SPI.h>
-#include <SoftwareSerial.h> // Allows sensors to avoid the USB serial port
+#include <SPI.h>              // Required for CAN support by coryjfowler/mcp_can@^1.5.0
+#include <SoftwareSerial.h>   // Allows sensors to avoid the USB serial port
 
 #include "EEPROM.h"
 
@@ -114,7 +114,7 @@ U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0,
 Adafruit_BMP280 bmp;                                                    // BMP280
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, WS2812_PIN, 
                                             NEO_GRB + NEO_KHZ800);      // WS2812 
-
+MCP_CAN CAN0(MCP2515_CSPIN);                                             // MCP2515
 /*--------------------------- Utility functions  ----------------------------*/
 
 void log_out(char *component, const char *value)

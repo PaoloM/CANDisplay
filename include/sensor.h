@@ -28,12 +28,7 @@
 ///////////////////////////////// SSD1306 I2C OLED DISPLAY //////////////////////////////////
 // Default connections in I2C are SCL -> D1 and SDA -> D2, 3.3v to VCC
 #include <U8g2lib.h> // olikraus/U8g2@^2.32.6
-#ifdef U8X8_HAVE_HW_SPI
-#include <SPI.h>
-#endif
-#ifdef U8X8_HAVE_HW_I2C
 #include <Wire.h>
-#endif
 
 #define          SSD1306_SCREEN_WIDTH         128 // OLED display width, in pixels
 #define          SSD1306_SCREEN_HEIGHT        64  // OLED display height, in pixels
@@ -59,7 +54,7 @@
 
 ///////////////////////////////// HD44780 16x2 LCD DISPLAY ///////////////////////////////////
 // (add some info)
-#include <LiquidCrystal_I2C.h>  // marcoschwartz/LiquidCrystal_I2C@^1.1.4                
+#include <LiquidCrystal_I2C.h> // marcoschwartz/LiquidCrystal_I2C@^1.1.4                
 
 #define          HD44780_SCREEN_ADDRESS       0x27 // 0x27 for 16x2 characters
 
@@ -82,8 +77,11 @@ static  int      KY040_STATUS_CURRENT       = KY040_STATUS_IDLE;
 // and minimize distance between Arduino and first pixel.  Avoid connecting
 // on a live circuit...if you must, connect GND first.
 #include <Adafruit_NeoPixel.h> // adafruit/Adafruit NeoPixel@^1.10.4
-#define          WS2812_PIN                   D8
+#define          WS2812_PIN                   D3
 #define          WS2812_NUMPIXELS             12 // strip.numPixels() returns are not reliable
 
 ///////////////////////////////// MCP2515 CAN BUS ///////////////////////////////////////////
 // (add some info)
+#include <mcp_can.h> // coryjfowler/mcp_can@^1.5.0
+#define          MCP2515_CSPIN                15
+#define CAN0_INT 2   

@@ -27,7 +27,7 @@
 
 #define     DEBUG                    true               // true to show messages on the Serial monitor
 
-#define     DELAY_MS                 10000              // milliseconds between sensor readings
+#define     DELAY_MS                 2000               // milliseconds between sensor readings
 #define     SPLASH_SCREEN_DELAY      2000               // milliseconds before splash screen dismissal
 #define     SCREEN_TIMEOUT_DELAY     5000               // milliseconds before screen timeout
 #define     USE_EEPROM               false              // use EEPROM for settings storage
@@ -52,4 +52,4 @@ int         JEEVES_SERVER_PORT     = 8080;              // Listening port of you
 #define     SENSOR_BMP280            false              // use the BMP280 temperature and pressure sensor
 #define     SENSOR_PMS5003           false              // TODO ** use the PMS5003 Digital Particle Concentration Laser Sensor  **
 #define     SENSOR_WS2812            true               // use a series of WS2812 addressable RGB LEDs
-#define     SENSOR_MCP2515           false              // use the MCP2515 CAN bus interface
+#define     SENSOR_MCP2515           true               // use the MCP2515 CAN bus interface
