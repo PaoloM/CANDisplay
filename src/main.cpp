@@ -304,20 +304,20 @@ void sensorSetup()
 
   if (SENSOR_MCP2515)   // - MCP2515 CAN BUS CONTROLLER
   {
-    SPI.begin();
-//SPISettings mySettting(speedMaximum, dataOrder, dataMode)
-SPI.beginTransaction(SPISettings(5000000, MSBFIRST, SPI_MODE3));
+//     SPI.begin();
+// //SPISettings mySettting(speedMaximum, dataOrder, dataMode)
+// SPI.beginTransaction(SPISettings(5000000, MSBFIRST, SPI_MODE3));
 
-// Initialize MCP2515 running at 16MHz with a baudrate of 500kb/s and the masks and filters disabled.
-byte res = CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_8MHZ);
-if (res == CAN_OK)
-  Serial.println("MCP2515 Initialized Successfully!");
-else
-  Serial.println("Error Initializing MCP2515. Error code:" + String(res));
+// // Initialize MCP2515 running at 16MHz with a baudrate of 500kb/s and the masks and filters disabled.
+// byte res = CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_8MHZ);
+// if (res == CAN_OK)
+//   Serial.println("MCP2515 Initialized Successfully!");
+// else
+//   Serial.println("Error Initializing MCP2515. Error code:" + String(res));
 
-CAN0.setMode(MCP_NORMAL); // Set operation mode to normal so the MCP2515 sends acks to received data.
+// CAN0.setMode(MCP_NORMAL); // Set operation mode to normal so the MCP2515 sends acks to received data.
 
-pinMode(CAN0_INT, INPUT); // Configuring pin for /INT input
+// pinMode(CAN0_INT, INPUT); // Configuring pin for /INT input
   }
 
   // TODO: Add other sensor-specific initialization code here

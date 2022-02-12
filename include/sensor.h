@@ -83,5 +83,5 @@ static  int      KY040_STATUS_CURRENT       = KY040_STATUS_IDLE;
 ///////////////////////////////// MCP2515 CAN BUS ///////////////////////////////////////////
 // (add some info)
 #include <mcp_can.h> // coryjfowler/mcp_can@^1.5.0
-#define          MCP2515_CSPIN                15
+#define          MCP2515_CSPIN                10
 #define CAN0_INT 2   
