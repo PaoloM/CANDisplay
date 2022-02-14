@@ -262,12 +262,12 @@ void sensorSetup()
 
   if (SENSOR_KY040)     // - KY040 ROTARY ENCODER
   {
-    pinMode(KY040_PIN_IN1, INPUT);
-    pinMode(KY040_PIN_IN1, INPUT_PULLUP);
-    pinMode(KY040_PIN_IN2, INPUT);
-    pinMode(KY040_PIN_IN2, INPUT_PULLUP);
-    pinMode(KY040_PIN_BUTTON, INPUT);
-    pinMode(KY040_PIN_BUTTON, INPUT_PULLUP);
+    pinMode(KY040_PIN_CLK, INPUT);
+    pinMode(KY040_PIN_CLK, INPUT_PULLUP);
+    pinMode(KY040_PIN_DT, INPUT);
+    pinMode(KY040_PIN_DT, INPUT_PULLUP);
+    pinMode(KY040_PIN_SW, INPUT);
+    pinMode(KY040_PIN_SW, INPUT_PULLUP);
   }
 
   if (SENSOR_BMP280)    // - BMP280 TEMPERATURE, ALTITUDE, PRESSURE SENSOR
@@ -299,25 +299,7 @@ void sensorSetup()
 
     strip.setBrightness(v[v[CURRENT_BRIGHTNESS]]);
     strip.show(); // Initialize all pixels to 'off'
-    StripLaunch();
-  }
-
-  if (SENSOR_MCP2515)   // - MCP2515 CAN BUS CONTROLLER
-  {
-//     SPI.begin();
-// //SPISettings mySettting(speedMaximum, dataOrder, dataMode)
-// SPI.beginTransaction(SPISettings(5000000, MSBFIRST, SPI_MODE3));
-
-// // Initialize MCP2515 running at 16MHz with a baudrate of 500kb/s and the masks and filters disabled.
-// byte res = CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_8MHZ);
-// if (res == CAN_OK)
-//   Serial.println("MCP2515 Initialized Successfully!");
-// else
-//   Serial.println("Error Initializing MCP2515. Error code:" + String(res));
-
-// CAN0.setMode(MCP_NORMAL); // Set operation mode to normal so the MCP2515 sends acks to received data.
-
-// pinMode(CAN0_INT, INPUT); // Configuring pin for /INT input
+    StripFullBlink(500, color_red);
   }
 
   // TODO: Add other sensor-specific initialization code here
@@ -349,9 +331,11 @@ void sensorUpdateReadings()
   // SaveState(KNOB_VALUE);
   // saveInput(KNOB_SELECTED_INPUT);
 
+  // - TEST DATA
   v[CURRENT_ENGINE_SPEED] += 500;
   if (v[CURRENT_ENGINE_SPEED] > v[PARAM_MAXRPM])
     v[CURRENT_ENGINE_SPEED] = 0;
+  // - /TEST DATA
 
   if (SENSOR_DHT) // - DHTxx TEMPERATURE AND HUMIDITY SENSOR
   {
@@ -695,7 +679,7 @@ void sensorUpdateReadingsQuick()
     }
   }
 
-  if (SENSOR_MCP2515) // - MCP2515 CAN BUS
+  if (SENSOR_SN65HVD230) // - SN65HVD230 CAN Bus module
   {
     // Set all the values from the car
     // -------------------------------
@@ -817,4 +801,33 @@ void sensorUpdateDisplay()
   {
     SSD1306_ShowDefaultScreen();
   }
+}
+
+// ------------------------------------------------------------------------------------------
+// Step 7/7 (optional) - This callback is invoked when an MQTT message is received.
+// ------------------------------------------------------------------------------------------
+void mqttCallback(char *topic, byte *payload, uint8_t length)
+{
+  // Prepare message
+  String message = "";
+  for (int i = 0; i < int(length); i++)
+  {
+    message += (char)payload[i];
+  }
+
+  // log message
+  char out[255];
+  sprintf(out, STR_MESSAGE_RECEIVED_FORMAT, topic, message.c_str());
+  log_out(STR_MQTT_LOG_PREFIX, out);
+
+  // // TODO: error handling
+  // int v;
+  // char p[255];
+  // sscanf(message.c_str(), STR_MODULAMP_CMD_FORMAT, p, &v);
+
+  // // TODO: make sure it's lowercase
+  // if (!strcmp(p, STR_MODULAMP_CMD_VOLUME))
+  //   setVolume(v);
+  // if (!strcmp(p, STR_MODULAMP_CMD_INPUT))
+  //   selectInput(v);
 }

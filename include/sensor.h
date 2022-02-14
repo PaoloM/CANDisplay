@@ -25,44 +25,58 @@
 // SOFTWARE.
 // ==========================================================================================
 
+// ------------------------------------------------------------------------------------------
+// PINOUTS
+// ------------------------------------------------------------------------------------------
+#ifndef ESP32
+#define          SSD1306_PIN_SCL              D1
+#define          SSD1306_PIN_SDA              D2
+#define          BMP280_PIN_SCL               D3
+#define          BMP280_PIN_SDA               D4
+#define          DHT_PIN                      D3
+#define          KY040_PIN_CLK                D5
+#define          KY040_PIN_DT                 D6
+#define          KY040_PIN_SW                 D7
+#define          WS2812_PIN                   D3
+#else
+#define          SSD1306_PIN_SCL              SCL
+#define          SSD1306_PIN_SDA              SDA
+#define          BMP280_PIN_SCL               SCL
+#define          BMP280_PIN_SDA               SDA
+#define          DHT_PIN                      15
+#define          KY040_PIN_CLK                34
+#define          KY040_PIN_DT                 35
+#define          KY040_PIN_SW                 3
+#define          WS2812_PIN                   4
+#endif
+
 ///////////////////////////////// SSD1306 I2C OLED DISPLAY //////////////////////////////////
 // Default connections in I2C are SCL -> D1 and SDA -> D2, 3.3v to VCC
 #include <U8g2lib.h> // olikraus/U8g2@^2.32.6
 #include <Wire.h>
-
 #define          SSD1306_SCREEN_WIDTH         128 // OLED display width, in pixels
 #define          SSD1306_SCREEN_HEIGHT        64  // OLED display height, in pixels
-#define          SSD1306_PIN_SCL              D1
-#define          SSD1306_PIN_SDA              D2
 
 ///////////////////////////////// BMP280 TEMPERATURE, PRESSURE, ALTITUDE SENSOR /////////////
 // (add some info)
 #include <Adafruit_BMP280.h>
-#define          BMP280_PIN_SCL               D3
-#define          BMP280_PIN_SDA               D4
 
 ///////////////////////////////// DHTxx TEMPERATURE AND HUMIDITY SENSOR //////////////////////
 // (add some info)
 #include <DHT.h> // adafruit/DHT sensor library@^1.4.3
 #include <DHT_U.h>
-
-#define          DHT_PIN                      D3
+#define          DHT_TEMPERATURE_IN_FARENHEIT true
 #define          DHT_TYPE                     DHT11     // DHT 11
 //#define          DHT_TYPE                     DHT22     // DHT 22 (AM2302)
 //#define          DHT_TYPE                     DHT21     // DHT 21 (AM2301)
-#define          DHT_TEMPERATURE_IN_FARENHEIT true
 
 ///////////////////////////////// HD44780 16x2 LCD DISPLAY ///////////////////////////////////
 // (add some info)
 #include <LiquidCrystal_I2C.h> // marcoschwartz/LiquidCrystal_I2C@^1.1.4                
-
 #define          HD44780_SCREEN_ADDRESS       0x27 // 0x27 for 16x2 characters
 
 ///////////////////////////////// KY-040 ROTARY ENCODER //////////////////////////////////////
 // (add some info)
-#define          KY040_PIN_IN1                D5   // CLK
-#define          KY040_PIN_IN2                D6   // DT
-#define          KY040_PIN_BUTTON             D7   // SW
 #define          KY040_STATUS_IDLE            0
 #define          KY040_STATUS_PRESSED         1
 #define          KY040_STATUS_GOINGUP         2
@@ -77,11 +91,7 @@ static  int      KY040_STATUS_CURRENT       = KY040_STATUS_IDLE;
 // and minimize distance between Arduino and first pixel.  Avoid connecting
 // on a live circuit...if you must, connect GND first.
 #include <Adafruit_NeoPixel.h> // adafruit/Adafruit NeoPixel@^1.10.4
-#define          WS2812_PIN                   D3
 #define          WS2812_NUMPIXELS             12 // strip.numPixels() returns are not reliable
 
-///////////////////////////////// MCP2515 CAN BUS ///////////////////////////////////////////
+///////////////////////////////// SN65HVD230 CAN Bus module /////////////////////////////////
 // (add some info)
-#include <mcp_can.h> // coryjfowler/mcp_can@^1.5.0
-#define          MCP2515_CSPIN                10
-#define CAN0_INT 2   

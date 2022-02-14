@@ -27,6 +27,21 @@
 
 #include <Arduino.h>
 
+#ifdef ESP32
+#include <WiFi.h>             //https://github.com/esp8266/Arduino
+#else
+#include <ESP8266WiFi.h>      //https://github.com/esp8266/Arduino
+#endif
+
+//needed for library
+#include <DNSServer.h>
+#if defined(ESP8266)
+#include <ESP8266WebServer.h>
+#else
+#include <WebServer.h>
+#endif
+#include <WiFiManager.h>      //https://github.com/tzapu/WiFiManager
+
 /*--------------------------- Configuration ------------------------------*/
 #include "config.h"           // Specific thing configuration
 #include "sensor.h"           // Sensor-specific data
@@ -38,18 +53,20 @@
 #include <Adafruit_Sensor.h>  // Universal sensor library - adafruit/Adafruit Unified Sensor@^1.1.4
 #include <PubSubClient.h>     // Required for MQTT - knolleary/PubSubClient@^2.8
 #include "RestClient.h"       // Required to access Jeeves services - hal9k-dk/ESP8266 REST client SSL@^2.1.0
+
+#ifndef ESP32
 #include <DNSServer.h>        // Required for AP support by tzapu/WiFiManager^0.16.0
 #include <ESP8266WebServer.h> // Required for AP support by tzapu/WiFiManager^0.16.0
 #include <WiFiManager.h>      // Required for AP support by tzapu/WiFiManager^0.16.0
-
-// Framework dependencies
 #include <ESP8266WiFi.h>      // ESP8266 WiFi driver
 #include <ESP8266mDNS.h>
+#include <SoftwareSerial.h>   // Allows sensors to avoid the USB serial port
+#endif
+
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>       // Required for OTA updates
 #include <Wire.h>
 #include <SPI.h>              // Required for CAN support by coryjfowler/mcp_can@^1.5.0
-#include <SoftwareSerial.h>   // Allows sensors to avoid the USB serial port
 
 #include "EEPROM.h"
 
@@ -62,7 +79,7 @@ char        MQTT_BROKER[20];                     // IP address of your MQTT brok
 char        MQTT_MESSAGE_BUFFER[150];            // General purpose buffer for MQTT messages
 char        MQTT_CMD_TOPIC[50];                  // MQTT topic for receiving commands
 char        MQTT_LOCATION[50];                   // Room/area where the sensor is located
-bool        MQTT_REPORT_TIMESTAMP = false;       // Report timestamp as a separate topic
+bool        MQTT_REPORT_TIMESTAMP = true;        // Report timestamp as a separate topic
 
 // Wifi
 #define WIFI_CONNECT_INTERVAL 500    // Wait 500ms intervals for wifi connection
@@ -114,7 +131,6 @@ U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0,
 Adafruit_BMP280 bmp;                                                    // BMP280
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, WS2812_PIN, 
                                             NEO_GRB + NEO_KHZ800);      // WS2812 
-MCP_CAN CAN0(MCP2515_CSPIN);                                             // MCP2515
 /*--------------------------- Utility functions  ----------------------------*/
 
 void log_out(char *component, const char *value)
@@ -165,9 +181,9 @@ int8_t read_rotary()
   static int8_t rot_enc_table[] = {0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0};
 
   KY040_PREV_NEXT_CODE <<= 2;
-  if (digitalRead(KY040_PIN_IN2))
+  if (digitalRead(KY040_PIN_DT))
     KY040_PREV_NEXT_CODE |= 0x02;
-  if (digitalRead(KY040_PIN_IN1))
+  if (digitalRead(KY040_PIN_CLK))
     KY040_PREV_NEXT_CODE |= 0x01;
   KY040_PREV_NEXT_CODE &= 0x0f;
 
@@ -282,31 +298,36 @@ void mqttSetup()
     char cmd[80];
 
     // get the location name from the Jeeves server
-    sprintf(cmd, STR_GET_TAG_API_FORMAT, DEVICE_ID);
-    int c = REST_CLIENT.get(cmd, &res);
+    // sprintf(cmd, STR_GET_TAG_API_FORMAT, DEVICE_ID);
+    // int c = REST_CLIENT.get(cmd, &res);
 
-    sprintf(cmd, "%s%d", STR_STATUS_MESSAGE, c);
-    log_out(STR_MQTT_LOG_PREFIX, cmd);
+    // sprintf(cmd, "%s%d", STR_STATUS_MESSAGE, c);
+    // log_out(STR_MQTT_LOG_PREFIX, cmd);
 
-    // prepare the location for all MQTT messages coming from this sensor
-    sprintf(MQTT_LOCATION, "%s", c != 200 ? STR_DEFAULT_LOCATION : res.c_str());
+    // // prepare the location for all MQTT messages coming from this sensor
+    // sprintf(MQTT_LOCATION, "%s", c != 200 ? STR_DEFAULT_LOCATION : res.c_str());
 
-    // prepare the topic where default messages will be received
-    sprintf(MQTT_CMD_TOPIC, "%s/%s", MQTT_LOCATION, STR_CMD_TOPIC);
+    // // prepare the topic where default messages will be received
+    // sprintf(MQTT_CMD_TOPIC, "%s/%s", MQTT_LOCATION, STR_CMD_TOPIC);
 
-    sprintf(cmd, STR_CMD_TOPIC_LOG_FORMAT, MQTT_CMD_TOPIC);
-    log_out(STR_MQTT_LOG_PREFIX, cmd);
+    // sprintf(cmd, STR_CMD_TOPIC_LOG_FORMAT, MQTT_CMD_TOPIC);
+    // log_out(STR_MQTT_LOG_PREFIX, cmd);
 
-    // get the address of the MQTT broker from the Jeeves server
-    c = REST_CLIENT.get(STR_GET_MQTT_BROKER_IP_API, &res2);
+    // // get the address of the MQTT broker from the Jeeves server
+    // c = REST_CLIENT.get(STR_GET_MQTT_BROKER_IP_API, &res2);
 
-    sprintf(cmd, STR_BROKER_LOG_FORMAT, res2.c_str());
-    log_out(STR_MQTT_LOG_PREFIX, cmd);
+    // sprintf(cmd, STR_BROKER_LOG_FORMAT, res2.c_str());
+    // log_out(STR_MQTT_LOG_PREFIX, cmd);
 
-    // define the location of the MQTT broker
-    sprintf(MQTT_BROKER, "%s", c != 200 ? STR_STATUS_UNKNOWN : res2.c_str());
+    // // define the location of the MQTT broker
+    // sprintf(MQTT_BROKER, "%s", c != 200 ? STR_STATUS_UNKNOWN : res2.c_str());
 
     // Set up the MQTT client and callback
+    
+    // *****************************
+    strcpy(MQTT_BROKER, "jeeves"); // TODO fix the rest call and then remove this
+    // *****************************
+    
     MQTT_CLIENT.setServer(MQTT_BROKER, 1883);
     MQTT_CLIENT.setCallback(mqttCallback);
   }
@@ -426,7 +447,16 @@ void timeSetup()
 /*--------------------------- Program ---------------------------------------*/
 void setup()
 {
+#ifdef ESP32
+  uint32_t chipId = 0;
+  for(int i=0; i<17; i=i+8) 
+  {
+	  chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
+	}
+  DEVICE_ID = chipId;
+#else
   DEVICE_ID = ESP.getChipId(); // Get the unique ID of the ESP8266 chip
+#endif
 
   serialSetup();
   wifiSetup();
@@ -460,13 +490,13 @@ void loop()
     }
   }
 
-  if (digitalRead(KY040_PIN_BUTTON) == 0)
+  if (digitalRead(KY040_PIN_SW) == 0)
   {
     delay(10);
-    if (digitalRead(KY040_PIN_BUTTON) == 0)
+    if (digitalRead(KY040_PIN_SW) == 0)
     {
       KY040_STATUS_CURRENT = KY040_STATUS_PRESSED;
-      while (digitalRead(KY040_PIN_BUTTON) == 0)
+      while (digitalRead(KY040_PIN_SW) == 0)
         ;
     }
   }
@@ -521,7 +551,7 @@ void loop()
 void reconnectMqtt()
 {
   char mqtt_client_id[20];
-  sprintf(mqtt_client_id, "Jeeves-%06X", ESP.getChipId());
+  sprintf(mqtt_client_id, "Jeeves-%06X", DEVICE_ID);
 
   // Loop until we're reconnected
   while (!MQTT_CLIENT.connected())
