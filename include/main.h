@@ -26,33 +26,34 @@
 // ==========================================================================================
 
 #include <Arduino.h>
+#include "EEPROM.h"
 
 #ifdef ESP32
-#include <WiFi.h>             //https://github.com/esp8266/Arduino
+#include <WiFi.h> //https://github.com/esp8266/Arduino
 #else
-#include <ESP8266WiFi.h>      //https://github.com/esp8266/Arduino
+#include <ESP8266WiFi.h> //https://github.com/esp8266/Arduino
 #endif
 
-//needed for library
+// needed for library
 #include <DNSServer.h>
 #if defined(ESP8266)
 #include <ESP8266WebServer.h>
 #else
 #include <WebServer.h>
 #endif
-#include <WiFiManager.h>      //https://github.com/tzapu/WiFiManager
+#include <WiFiManager.h> //https://github.com/tzapu/WiFiManager
 
 /*--------------------------- Configuration ------------------------------*/
-#include "config.h"           // Specific thing configuration
-#include "sensor.h"           // Sensor-specific data
-#include "strings.h"          // Localized strings
-#include "menu.h"             // Menu library
+#include "config.h"  // Specific thing configuration
+#include "sensor.h"  // Sensor-specific data
+#include "strings.h" // Localized strings
+#include "menu.h"    // Menu library
 
 /*--------------------------- Libraries ----------------------------------*/
 // External dependencies
-#include <Adafruit_Sensor.h>  // Universal sensor library - adafruit/Adafruit Unified Sensor@^1.1.4
-#include <PubSubClient.h>     // Required for MQTT - knolleary/PubSubClient@^2.8
-#include "RestClient.h"       // Required to access Jeeves services - hal9k-dk/ESP8266 REST client SSL@^2.1.0
+#include <Adafruit_Sensor.h> // Universal sensor library - adafruit/Adafruit Unified Sensor@^1.1.4
+#include <PubSubClient.h>    // Required for MQTT - knolleary/PubSubClient@^2.8
+#include "RestClient.h"      // Required to access Jeeves services - hal9k-dk/ESP8266 REST client SSL@^2.1.0
 
 #ifndef ESP32
 #include <DNSServer.h>        // Required for AP support by tzapu/WiFiManager^0.16.0
@@ -60,26 +61,26 @@
 #include <WiFiManager.h>      // Required for AP support by tzapu/WiFiManager^0.16.0
 #include <ESP8266WiFi.h>      // ESP8266 WiFi driver
 #include <ESP8266mDNS.h>
-#include <SoftwareSerial.h>   // Allows sensors to avoid the USB serial port
+#include <SoftwareSerial.h> // Allows sensors to avoid the USB serial port
 #endif
 
 #include <WiFiUdp.h>
-#include <ArduinoOTA.h>       // Required for OTA updates
+#include <ArduinoOTA.h> // Required for OTA updates
 #include <Wire.h>
-#include <SPI.h>              // Required for CAN support by coryjfowler/mcp_can@^1.5.0
-
-#include "EEPROM.h"
+//#include <SPI.h> // Required for CAN support by coryjfowler/mcp_can@^1.5.0
+#include <ESP32CAN.h> // Required for CAN support by miwagner/ESP32CAN@^0.0.1
+#include <CAN_config.h> // Required for CAN support by miwagner/ESP32CAN@^0.0.1
 
 #include <time.h>
 
 /*--------------------------- Global Variables ---------------------------*/
 // MQTT general
-const char *MQTT_STATUS_TOPIC = "Events";        // MQTT topic to report startup events
-char        MQTT_BROKER[20];                     // IP address of your MQTT broker
-char        MQTT_MESSAGE_BUFFER[150];            // General purpose buffer for MQTT messages
-char        MQTT_CMD_TOPIC[50];                  // MQTT topic for receiving commands
-char        MQTT_LOCATION[50];                   // Room/area where the sensor is located
-bool        MQTT_REPORT_TIMESTAMP = true;        // Report timestamp as a separate topic
+const char *MQTT_STATUS_TOPIC = "Events"; // MQTT topic to report startup events
+char MQTT_BROKER[20];                     // IP address of your MQTT broker
+char MQTT_MESSAGE_BUFFER[150];            // General purpose buffer for MQTT messages
+char MQTT_CMD_TOPIC[50];                  // MQTT topic for receiving commands
+char MQTT_LOCATION[50];                   // Room/area where the sensor is located
+bool MQTT_REPORT_TIMESTAMP = true;        // Report timestamp as a separate topic
 
 // Wifi
 #define WIFI_CONNECT_INTERVAL 500    // Wait 500ms intervals for wifi connection
@@ -90,8 +91,8 @@ uint32_t DEVICE_ID; // Unique ID from ESP chip ID
 
 // Time/NTP
 const char *ntpServer = "pool.ntp.org";
-const long gmtOffset_sec = 28800;    //Replace with your GMT offset (seconds)
-const int daylightOffset_sec = 3600; //Replace with your daylight offset (seconds)
+const long gmtOffset_sec = 28800;    // Replace with your GMT offset (seconds)
+const int daylightOffset_sec = 3600; // Replace with your daylight offset (seconds)
 
 // Loop timer
 unsigned int previousUpdateTime = millis();
@@ -124,13 +125,15 @@ PubSubClient MQTT_CLIENT(ESP_CLIENT);                                   // MQTT
 RestClient REST_CLIENT = RestClient(JEEVES_SERVER, JEEVES_SERVER_PORT); // Jeeves server connection
 LiquidCrystal_I2C lcd(HD44780_SCREEN_ADDRESS, 20, 4);                   // set the LCD address to 0x27 for a 16 chars and 2 line display
 DHT_Unified dht(DHT_PIN, DHT_TYPE);
-U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, 
+U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0,
                                          U8X8_PIN_NONE,
-                                         SSD1306_PIN_SCL, 
+                                         SSD1306_PIN_SCL,
                                          SSD1306_PIN_SDA);              // All Boards without Reset of the Display
 Adafruit_BMP280 bmp;                                                    // BMP280
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, WS2812_PIN, 
-                                            NEO_GRB + NEO_KHZ800);      // WS2812 
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, WS2812_PIN,
+                                            NEO_GRB + NEO_KHZ800);      // WS2812
+CAN_device_t CAN_cfg;                                                   // SN65HVD230
+
 /*--------------------------- Utility functions  ----------------------------*/
 
 void log_out(char *component, const char *value)
@@ -175,7 +178,7 @@ void sendToMqttTopicAndValue(char *topic, String value)
   }
 }
 
-//  KY-040 debouncing: A valid CW or CCW move returns 1, invalid returns 0.
+// KY-040 ESP8266 debouncing: A valid CW or CCW move returns 1, invalid returns 0.
 int8_t read_rotary()
 {
   static int8_t rot_enc_table[] = {0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0};
@@ -192,8 +195,8 @@ int8_t read_rotary()
   {
     KY040_STORE <<= 4;
     KY040_STORE |= KY040_PREV_NEXT_CODE;
-    //if (KY040_STORE==0xd42b) return 1;
-    //if (KY040_STORE==0xe817) return -1;
+    // if (KY040_STORE==0xd42b) return 1;
+    // if (KY040_STORE==0xe817) return -1;
     if ((KY040_STORE & 0xff) == 0x2b)
       return -1;
     if ((KY040_STORE & 0xff) == 0x17)
@@ -202,15 +205,50 @@ int8_t read_rotary()
   return 0;
 }
 
+// KY-040 ESP32 debouncing
+void read_encoder()
+{
+  // Encoder routine. Updates counter if they are valid
+  // and if rotated a full indent
+
+  static uint8_t old_AB = 3;                                                               // Lookup table index
+  static int8_t encval = 0;                                                                // Encoder value
+  static const int8_t enc_states[] = {0, -1, 1, 0, 1, 0, 0, -1, -1, 0, 0, 1, 0, 1, -1, 0}; // Lookup table
+
+  old_AB <<= 2; // Remember previous state
+
+  if (digitalRead(KY040_PIN_DT))
+    old_AB |= 0x02; // Add current state of pin A
+  if (digitalRead(KY040_PIN_CLK))
+    old_AB |= 0x01; // Add current state of pin B
+
+  encval += enc_states[(old_AB & 0x0f)];
+
+  // Update counter if encoder has rotated a full indent, that is at least 4 steps
+  if (encval > 3)
+  {                  // Four steps forward
+    KY040_COUNTER++; // Increase counter
+    encval = 0;
+  }
+  else if (encval < -3)
+  {                  // Four steps backwards
+    KY040_COUNTER--; // Decrease counter
+    encval = 0;
+  }
+}
+
 // WS2812 functions
 // Input a value 0 to 255 to get a color value.
 // The colours are a transition r - g - b - back to r.
-uint32_t Wheel(byte WheelPos) {
+uint32_t Wheel(byte WheelPos)
+{
   WheelPos = 255 - WheelPos;
-  if(WheelPos < 85) {
+  if (WheelPos < 85)
+  {
     return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
   }
-  if(WheelPos < 170) {
+  if (WheelPos < 170)
+  {
     WheelPos -= 85;
     return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
   }
@@ -219,20 +257,25 @@ uint32_t Wheel(byte WheelPos) {
 }
 
 // Fill the dots one after the other with a color
-void colorWipe(uint32_t c, uint8_t wait) {
-  for(uint16_t i=0; i<strip.numPixels(); i++) {
+void colorWipe(uint32_t c, uint8_t wait)
+{
+  for (uint16_t i = 0; i < strip.numPixels(); i++)
+  {
     strip.setPixelColor(i, c);
     strip.show();
     delay(wait);
   }
 }
 
-void rainbow(uint8_t wait) {
+void rainbow(uint8_t wait)
+{
   uint16_t i, j;
 
-  for(j=0; j<256; j++) {
-    for(i=0; i<strip.numPixels(); i++) {
-      strip.setPixelColor(i, Wheel((i+j) & 255));
+  for (j = 0; j < 256; j++)
+  {
+    for (i = 0; i < strip.numPixels(); i++)
+    {
+      strip.setPixelColor(i, Wheel((i + j) & 255));
     }
     strip.show();
     delay(wait);
@@ -240,11 +283,14 @@ void rainbow(uint8_t wait) {
 }
 
 // Slightly different, this makes the rainbow equally distributed throughout
-void rainbowCycle(uint8_t wait) {
+void rainbowCycle(uint8_t wait)
+{
   uint16_t i, j;
 
-  for(j=0; j<256*5; j++) { // 5 cycles of all colors on wheel
-    for(i=0; i< strip.numPixels(); i++) {
+  for (j = 0; j < 256 * 5; j++)
+  { // 5 cycles of all colors on wheel
+    for (i = 0; i < strip.numPixels(); i++)
+    {
       strip.setPixelColor(i, Wheel(((i * 256 / strip.numPixels()) + j) & 255));
     }
     strip.show();
@@ -252,41 +298,52 @@ void rainbowCycle(uint8_t wait) {
   }
 }
 
-//Theatre-style crawling lights.
-void theaterChase(uint32_t c, uint8_t wait) {
-  for (int j=0; j<10; j++) {  //do 10 cycles of chasing
-    for (int q=0; q < 3; q++) {
-      for (uint16_t i=0; i < strip.numPixels(); i=i+3) {
-        strip.setPixelColor(i+q, c);    //turn every third pixel on
+// Theatre-style crawling lights.
+void theaterChase(uint32_t c, uint8_t wait)
+{
+  for (int j = 0; j < 10; j++)
+  { // do 10 cycles of chasing
+    for (int q = 0; q < 3; q++)
+    {
+      for (uint16_t i = 0; i < strip.numPixels(); i = i + 3)
+      {
+        strip.setPixelColor(i + q, c); // turn every third pixel on
       }
       strip.show();
 
       delay(wait);
 
-      for (uint16_t i=0; i < strip.numPixels(); i=i+3) {
-        strip.setPixelColor(i+q, 0);        //turn every third pixel off
+      for (uint16_t i = 0; i < strip.numPixels(); i = i + 3)
+      {
+        strip.setPixelColor(i + q, 0); // turn every third pixel off
       }
     }
   }
 }
 
-//Theatre-style crawling lights with rainbow effect
-void theaterChaseRainbow(uint8_t wait) {
-  for (int j=0; j < 256; j++) {     // cycle all 256 colors in the wheel
-    for (int q=0; q < 3; q++) {
-      for (uint16_t i=0; i < strip.numPixels(); i=i+3) {
-        strip.setPixelColor(i+q, Wheel( (i+j) % 255));    //turn every third pixel on
+// Theatre-style crawling lights with rainbow effect
+void theaterChaseRainbow(uint8_t wait)
+{
+  for (int j = 0; j < 256; j++)
+  { // cycle all 256 colors in the wheel
+    for (int q = 0; q < 3; q++)
+    {
+      for (uint16_t i = 0; i < strip.numPixels(); i = i + 3)
+      {
+        strip.setPixelColor(i + q, Wheel((i + j) % 255)); // turn every third pixel on
       }
       strip.show();
 
       delay(wait);
 
-      for (uint16_t i=0; i < strip.numPixels(); i=i+3) {
-        strip.setPixelColor(i+q, 0);        //turn every third pixel off
+      for (uint16_t i = 0; i < strip.numPixels(); i = i + 3)
+      {
+        strip.setPixelColor(i + q, 0); // turn every third pixel off
       }
     }
   }
 }
+
 
 /*--------------------------- MQTT ---------------------------------------*/
 void mqttSetup()
@@ -323,11 +380,11 @@ void mqttSetup()
     // sprintf(MQTT_BROKER, "%s", c != 200 ? STR_STATUS_UNKNOWN : res2.c_str());
 
     // Set up the MQTT client and callback
-    
+
     // *****************************
     strcpy(MQTT_BROKER, "jeeves"); // TODO fix the rest call and then remove this
     // *****************************
-    
+
     MQTT_CLIENT.setServer(MQTT_BROKER, 1883);
     MQTT_CLIENT.setCallback(mqttCallback);
   }
@@ -339,7 +396,7 @@ void wifiSetup()
   if (USE_WIFI)
   {
     WiFiManager wifiManager;
-    //wifiManager.resetSettings(); // uncomment this to reset the device EEPROM
+    // wifiManager.resetSettings(); // uncomment this to reset the device EEPROM
     wifiManager.autoConnect("Jeeves.AP"); // define the default access point to set wifi credentials
     WiFi.setAutoReconnect(true);
     WiFi.persistent(true);
@@ -351,6 +408,7 @@ void serialSetup()
 {
   // Setup communication with the serial monitor
   Serial.begin(SERIAL_BAUD_RATE);
+  delay(500); // wait for the serial to start
   Serial.println();
   Serial.println();
 
@@ -395,8 +453,7 @@ void otaSetup()
 
                        // NOTE: if updating FS this would be the place to unmount FS using FS.end()
                        sprintf(s, STR_OTA_START_UPDATE_MESSAGE, type.c_str());
-                       log_out(STR_OTA_LOG_PREFIX, s);
-                     });
+                       log_out(STR_OTA_LOG_PREFIX, s); });
 
   ArduinoOTA.onEnd([]()
                    { log_out(STR_OTA_LOG_PREFIX, STR_OTA_END_UPDATE_MESSAGE); });
@@ -405,8 +462,7 @@ void otaSetup()
                         {
                           char s[255];
                           sprintf(s, STR_OTA_UPDATE_PROGRESS_FORMAT, (progress / (total / 100)));
-                          log_out(STR_OTA_LOG_PREFIX, s);
-                        });
+                          log_out(STR_OTA_LOG_PREFIX, s); });
 
   ArduinoOTA.onError([](ota_error_t error)
                      {
@@ -431,8 +487,7 @@ void otaSetup()
                        {
                          sprintf(se, STR_OTA_ERROR_MESSAGE_FORMAT, error, STR_OTA_ERROR_END_FAILED);
                        }
-                       log_out(STR_OTA_LOG_PREFIX, se);
-                     });
+                       log_out(STR_OTA_LOG_PREFIX, se); });
 
   ArduinoOTA.begin();
 }
@@ -440,7 +495,7 @@ void otaSetup()
 /*--------------------------- TIME/NTP ---------------------------------------*/
 void timeSetup()
 {
-  //init and get the time
+  // init and get the time
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 }
 
@@ -449,29 +504,70 @@ void setup()
 {
 #ifdef ESP32
   uint32_t chipId = 0;
-  for(int i=0; i<17; i=i+8) 
+  for (int i = 0; i < 17; i = i + 8)
   {
-	  chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
-	}
+    chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
+  }
   DEVICE_ID = chipId;
 #else
   DEVICE_ID = ESP.getChipId(); // Get the unique ID of the ESP8266 chip
 #endif
 
   serialSetup();
+
+  if (USE_EEPROM)
+  {
+    if (!EEPROM.begin(512))
+    {
+      Serial.println("Failed to initialise EEPROM");
+      Serial.println("Restarting...");
+      delay(1000);
+      ESP.restart();
+    }
+  }
+
   wifiSetup();
   timeSetup();
   otaSetup();
   mqttSetup();
-  sensorSetup();
-  sensorMqttSetup();
   valuesSetup();
   menuSetup();
+  sensorSetup();
+  sensorMqttSetup();
 }
 
 void loop()
 {
-  // Special code to handle KY-040 rotary encoder
+#ifdef ESP32
+  // Special code to handle KY-040 rotary encoder on ESP32
+  // from https://garrysblog.com/2021/03/20/reliably-debouncing-rotary-encoders-with-arduino-and-esp32/
+  static int lastCounter = 0;
+
+  read_encoder();
+
+  if (KY040_COUNTER > lastCounter)
+  {
+    KY040_STATUS_CURRENT = KY040_STATUS_GOINGUP;
+    lastCounter = KY040_COUNTER;
+  }
+  else if (KY040_COUNTER < lastCounter)
+  {
+    KY040_STATUS_CURRENT = KY040_STATUS_GOINGDOWN;
+    lastCounter = KY040_COUNTER;
+  }
+
+  if (digitalRead(KY040_PIN_SW) == 0)
+  {
+    delay(10);
+    if (digitalRead(KY040_PIN_SW) == 0)
+    {
+      KY040_STATUS_CURRENT = KY040_STATUS_PRESSED;
+      while (digitalRead(KY040_PIN_SW) == 0)
+        ;
+    }
+  }
+#else
+  // Special code to handle KY-040 rotary encoder on ESP8266
   // from https://www.best-microcontroller-projects.com/rotary-encoder.html
   static int8_t c, val;
 
@@ -500,35 +596,36 @@ void loop()
         ;
     }
   }
-  // - end of KY040 debounce code
+  // - end of KY040 ESP8266 debounce code
+#endif
 
   if (USE_WIFI)
   {
-  if (WiFi.status() == WL_CONNECTED)
-  {
-    if (USE_MQTT)
+    if (WiFi.status() == WL_CONNECTED)
     {
-      if (!MQTT_CLIENT.connected())
+      if (USE_MQTT)
       {
-        reconnectMqtt();
+        if (!MQTT_CLIENT.connected())
+        {
+          reconnectMqtt();
+        }
       }
     }
-    }
 
-  if (USE_MQTT)
-  {
-    MQTT_CLIENT.loop(); // process any outstanding MQTT messages
-  }
+    if (USE_MQTT)
+    {
+      MQTT_CLIENT.loop(); // process any outstanding MQTT messages
+    }
   }
 
   sensorUpdateReadingsQuick(); // get the data from sensors at max speed
 
   if (millis() - previousUpdateTime >= DELAY_MS)
   {
-    sensorUpdateReadings(); // get the data from sensors
-    sensorReportToMqtt(MQTT_REPORT_TIMESTAMP);   // send messages to the MQTT broker
-    sensorReportToSerial(); // print the data on the serial port
-    sensorUpdateDisplay();  // update the local display, if present
+    sensorUpdateReadings();                    // get the data from sensors
+    sensorReportToMqtt(MQTT_REPORT_TIMESTAMP); // send messages to the MQTT broker
+    sensorReportToSerial();                    // print the data on the serial port
+    sensorUpdateDisplay();                     // update the local display, if present
     previousUpdateTime = millis();
   }
 

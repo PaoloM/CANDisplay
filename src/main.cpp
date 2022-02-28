@@ -27,9 +27,9 @@
 
 #pragma GCC diagnostic ignored "-Wwrite-strings"
 
-#define SENSOR_TYPE "CANDISPLAY" // type of sensor (keep it uppercase for display compatibility)
-#define VERSION "0.1"            // firmware version
-#define MAIN_TOPIC "candisplay"  // default MQTT topic (can be empty, typically lowercase)
+#define SENSOR_TYPE "CANDISPLAY"     // type of sensor (keep it uppercase for display compatibility)
+#define VERSION     "0.2"            // firmware version
+#define MAIN_TOPIC  "candisplay"     // default MQTT topic (can be empty, typically lowercase)
 
 #define VALUE_COUNT 30
 
@@ -43,7 +43,7 @@ char l[VALUE_COUNT][20];
 // - SSD1306 Fonts
 #define FONT_HEADER u8g2_font_logisoso16_tf
 #define FONT_LARGE u8g2_font_logisoso38_tf
-#define FONT_BODY u8g2_font_logisoso18_tf
+#define FONT_BODY u8g2_font_logisoso16_tf
 
 // - KY040 knob values
 #define KNOB_MODE_MENU 0
@@ -90,6 +90,9 @@ int WS2812_EXTRAPIXEL_3 = WS2812_NUMPIXELS + 3;            // optional
 char input_mqtt_topic[50];
 char volume_mqtt_topic[50];
 char temperature_mqtt_topic[50];
+
+char temp[100];
+char teml[100]; 
 
 // TODO: add global variables here
 int addr = 0;
@@ -222,12 +225,6 @@ void SSD1306_ShowDefaultScreen()
 
 void sensorSetup()
 {
-  if (USE_EEPROM)
-  {
-    EEPROM.begin(512);
-    RetrieveState();
-  }
-
   if (SENSOR_SSD1306)   // - SSD1306 I2C OLED DISPLAY
   {
     u8g2.begin();
@@ -291,19 +288,23 @@ void sensorSetup()
   if (SENSOR_WS2812)    // - WS2812 RGB LED STRIP
   {
     strip.begin();
-
-    Serial.print("Current brightness [");
-    Serial.print(CURRENT_BRIGHTNESS);
-    Serial.print("] = ");
-    Serial.println(v[CURRENT_BRIGHTNESS]);
-
     strip.setBrightness(v[v[CURRENT_BRIGHTNESS]]);
     strip.show(); // Initialize all pixels to 'off'
-    StripFullBlink(500, color_red);
   }
 
-  // TODO: Add other sensor-specific initialization code here
-  /* code */
+  if (SENSOR_SN65HVD230) // - SN65HVD230 CAN Bus module
+  {
+    const int rx_queue_size = 10; // Receive Queue size
+    char s[80];
+
+    CAN_cfg.speed = CAN_SPEED_500KBPS;
+    CAN_cfg.tx_pin_id = (gpio_num_t)SN65HVD230_PIN_CTX;
+    CAN_cfg.rx_pin_id = (gpio_num_t)SN65HVD230_PIN_CRX;
+    CAN_cfg.rx_queue = xQueueCreate(rx_queue_size, sizeof(CAN_frame_t));
+    int i = ESP32Can.CANInit(); // Init CAN Module
+    sprintf(s, STR_SN65HVD230_STARTUP_MESSAGE_FORMAT, i);
+    log_out(STR_SN65HVD230_LOG_PREFIX, s);
+  }
 }
 
 // ------------------------------------------------------------------------------------------
@@ -427,15 +428,17 @@ void SaveCurrentValue(int m)
   else
   {
     v[mi[m].setValueID] = mi[m].intValueCurrent;
+    
+    saveValueToEEPROM(mi[m].setValueID, mi[m].intValueCurrent);
 
-    for (int i = 0; i < 15; i++)
-    {
-      Serial.print(i);
-      Serial.print(":[");
-      Serial.print(l[i]);
-      Serial.print("] = ");
-      Serial.println(v[i]);
-    }
+    // for (int i = 0; i < 15; i++)
+    // {
+    //   Serial.print(i);
+    //   Serial.print(":[");
+    //   Serial.print(l[i]);
+    //   Serial.print("] = ");
+    //   Serial.println(v[i]);
+    // }
 
     ON_SPLASH_SCREEN = false;
     SSD1306_ResetTimeout();
@@ -700,6 +703,35 @@ void sensorUpdateReadingsQuick()
     // Turbocharger RPM:                           74(116)   5
     // Turbocharger temperature:                   75(117)   7
     // Turbocharger temperature:                   76(118)   7
+
+    CAN_frame_t rx_frame;
+    char s[80];
+    uint32_t msgID_RPM = 0x00000105;
+
+    // Receive next CAN frame from queue
+    if (xQueueReceive(CAN_cfg.rx_queue, &rx_frame, 3 * portTICK_PERIOD_MS) == pdTRUE)
+    {
+      for (int i = 0; i < rx_frame.FIR.B.DLC; i++)
+      {
+        // get data from bit 3 and 4 and save to temp array
+        if (i == 2 && rx_frame.MsgID == msgID_RPM)
+        {
+          sprintf(teml, "0x%02X ", rx_frame.data.u8[2]);
+        }
+        if (i == 3 && rx_frame.MsgID == msgID_RPM)
+        {
+          sprintf(temp, "0x%02X ", rx_frame.data.u8[3]);
+        }
+      }
+      // convert hex string from array to long int
+      long int valueHex = strtol(temp, NULL, 16);  // convert hex string to decimal
+      long int valueHex1 = strtol(teml, NULL, 16); // convert hex string to decimal
+      // calculate values for engine_rpm
+      long int finalRpm = 0.25 * (256 * valueHex + valueHex1);
+      v[CURRENT_ENGINE_SPEED] = finalRpm;
+      sprintf(s, STR_SN65HVD230_RPM_MESSAGE_FORMAT, msgID_RPM, finalRpm);
+      log_out(STR_SN65HVD230_LOG_PREFIX, s);
+    }
   }
 
   // TODO: Perform measurements on every loop
