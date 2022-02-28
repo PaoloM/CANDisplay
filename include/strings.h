@@ -45,6 +45,7 @@
 #define STR_WIFIMAN_LOG_PREFIX                   "WIFIMAN "
 #define STR_OTA_LOG_PREFIX                       "OTA     "
 #define STR_DHT_LOG_PREFIX                       "DHT     "
+#define STR_SN65HVD230_LOG_PREFIX                "CANBUS  "
 
 #define STR_OTA_START_UPDATE_MESSAGE             "Start updating %s"
 #define STR_OTA_END_UPDATE_MESSAGE               "End"
@@ -79,6 +80,9 @@
 
 #define STR_SENSOR_ERROR_DHT_TEMPERATURE         "Error reading temperature!"
 #define STR_SENSOR_ERROR_DHT_HUMIDITY            "Error reading humidity!"
+
+#define STR_SN65HVD230_STARTUP_MESSAGE_FORMAT    "Init (result=%d)"
+#define STR_SN65HVD230_RPM_MESSAGE_FORMAT        "Received ENGINE_SPEED(%08X) = %d"
 
 // CANDISPLAY specific strings --------------------------------------------------
 

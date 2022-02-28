@@ -62,61 +62,74 @@ bool inMenu = true;
 
 // /* --- to be moved in main.h
 
-// ---- Things specific value IDs
-#define MENU_VALUE_MAXRPM                          101
-#define MENU_VALUE_BRIGHTNESS_DAY                  102
-#define MENU_VALUE_BRIGHTNESS_NIGHT                103
-#define MENU_VALUE_BRIGHTNESS_AUTODIM              104
-#define MENU_VALUE_SHOW_INFO                       106
-#define MENU_VALUE_SHOW_HOME                       107
-#define MENU_VALUE_DISPLAY                         108
-#define MENU_VALUE_DISPLAY_ENGINESPEEED            109
-#define MENU_VALUE_DISPLAY_VEHICLESPEED            110
+// --- Menu configuration
+const int MENU_VALUE_MAXRPM = 101;
+const int MENU_VALUE_BRIGHTNESS_DAY = 102;
+const int MENU_VALUE_BRIGHTNESS_NIGHT = 103;
+const int MENU_VALUE_BRIGHTNESS_AUTODIM = 104;
+const int MENU_VALUE_SHOW_INFO = 106;
+const int MENU_VALUE_SHOW_HOME = 107;
+const int MENU_VALUE_DISPLAY = 108;
+const int MENU_VALUE_DISPLAY_ENGINESPEEED = 109;
+const int MENU_VALUE_DISPLAY_VEHICLESPEED = 110;
 
-#define CURRENT_ENGINE_SPEED                         0 /* From CAN Bus */
-#define CURRENT_VEHICLE_SPEED                        1 /* From CAN Bus */
-#define CURRENT_DISPLAY                              2 
-#define CURRENT_BRIGHTNESS                           3 /* PARAM_BRIGHTNESSDAY or PARAM_BRIGHTNESSNIGHT */
+// --- Dynamic values (derived from CAN readings)
+const int CURRENT_ENGINE_SPEED = 0;                      /* From CAN Bus */
+const int CURRENT_VEHICLE_SPEED = 1;                     /* From CAN Bus */
 
-// #define VALUE_AUTODIM_ON                             4 
-// #define VALUE_AUTODIM_OFF                            5
-
-#define PARAM_MAXRPM                                 6
-// #define PARAM_AUTODIM                                7
-#define PARAM_BRIGHTNESSDAY                          8
-#define PARAM_BRIGHTNESSNIGHT                        9
-#define VALUE_TEST                                  10 /* ? */
-#define VALUE_TEST_LED                              11 /* ? */
-#define VALUE_MINRPM                                12 /* typically 0 */
-#define VALUE_SHOW                                  13 /* ? */
-
+// --- Parameter values (to be persisted across power cycles)
+const int PARAM_MAXRPM = 2;
+const int PARAM_BRIGHTNESSDAY = 3;
+const int PARAM_BRIGHTNESSNIGHT = 4;
+const int CURRENT_DISPLAY = 5;
+const int CURRENT_BRIGHTNESS = 6; /* PARAM_BRIGHTNESSDAY or PARAM_BRIGHTNESSNIGHT */
+const int VALUE_MINRPM = 7;                             /* typically 0 */
+const int VALUE_SHOW = 8;                               /* ? */
 
 void valuesSetup()
 {
+    // setup labels
+    strcpy(l[CURRENT_ENGINE_SPEED], "ENGINE RPM");
+    strcpy(l[CURRENT_VEHICLE_SPEED], "VEHICLE MPH");
+    strcpy(l[CURRENT_DISPLAY], "CURR.DISPLAY");
+    strcpy(l[CURRENT_BRIGHTNESS], "CURR.BRIGHT");
+    strcpy(l[PARAM_BRIGHTNESSDAY], "BRIGHT.DAY");
+    strcpy(l[PARAM_BRIGHTNESSNIGHT], "BRIGHT.NIGHT");
+    strcpy(l[PARAM_MAXRPM], "MAX.RPM");
+    strcpy(l[VALUE_MINRPM], "MIN.RPM");
+    strcpy(l[VALUE_SHOW], "SHOW");
+
     // setup values
-    // TODO get the parameters from EEPROM
-    v[CURRENT_ENGINE_SPEED] = 5000;                   strcpy(l[CURRENT_ENGINE_SPEED], "ENGINE RPM");
-    v[CURRENT_VEHICLE_SPEED] = 0;                     strcpy(l[CURRENT_VEHICLE_SPEED], "VEHICLE MPH");
-    //v[PARAM_AUTODIM] = 0;                             strcpy(l[PARAM_AUTODIM], "AUTODIM");
-    v[PARAM_BRIGHTNESSDAY] = 30;                      strcpy(l[PARAM_BRIGHTNESSDAY], "BRIGHT.DAY");
-    v[PARAM_BRIGHTNESSNIGHT] = 10;                    strcpy(l[PARAM_BRIGHTNESSNIGHT], "BRIGHT.NIGHT");
-    v[CURRENT_DISPLAY] = CURRENT_ENGINE_SPEED;        strcpy(l[CURRENT_DISPLAY], "CURR.DISPLAY");
-    v[PARAM_MAXRPM] = 7000;                           strcpy(l[PARAM_MAXRPM], "MAX.RPM");
-    v[VALUE_MINRPM] = 0;                              strcpy(l[VALUE_MINRPM], "MIN.RPM");
-    v[CURRENT_BRIGHTNESS] = PARAM_BRIGHTNESSDAY;      strcpy(l[CURRENT_BRIGHTNESS], "CURR.BRIGHT");
-    v[VALUE_SHOW] = MENU_VALUE_SHOW_INFO;             strcpy(l[VALUE_SHOW], "SHOW");
+    v[CURRENT_ENGINE_SPEED] = getValueFromEEPROM(CURRENT_ENGINE_SPEED, 4000);
+    v[CURRENT_VEHICLE_SPEED] = getValueFromEEPROM(CURRENT_VEHICLE_SPEED, 0);
+    v[PARAM_MAXRPM] = getValueFromEEPROM(PARAM_MAXRPM, 6000);
+    v[PARAM_BRIGHTNESSDAY] = getValueFromEEPROM(PARAM_BRIGHTNESSDAY, 30);
+    v[PARAM_BRIGHTNESSNIGHT] = getValueFromEEPROM(PARAM_BRIGHTNESSNIGHT, 10);
+    v[CURRENT_DISPLAY] = getValueFromEEPROM(CURRENT_DISPLAY, CURRENT_ENGINE_SPEED);
+    v[CURRENT_BRIGHTNESS] = getValueFromEEPROM(CURRENT_BRIGHTNESS, PARAM_BRIGHTNESSDAY);
+    v[VALUE_MINRPM] = getValueFromEEPROM(VALUE_MINRPM, 0);
+    v[VALUE_SHOW] = getValueFromEEPROM(VALUE_SHOW, MENU_VALUE_SHOW_INFO);
+
+    for (int i = 0; i < 15; i++)
+    {
+      Serial.print(i);
+      Serial.print(":[");
+      Serial.print(l[i]);
+      Serial.print("] = ");
+      Serial.println(v[i]);
+    }
 }
+
 void menuSetup()
 {
     // setup menus
     strcpy(mi[0].label, "SETTINGS");
     mi[0].type = MENU_TYPE_MENU;
-    mi[0].menuItemsCount = 5;
+    mi[0].menuItemsCount = 4;
     mi[0].m[0] = 1;
     mi[0].m[1] = 2;
     mi[0].m[2] = 9;
     mi[0].m[3] = 8;
-    mi[0].m[4] = 12;
 
     strcpy(mi[1].label, "MAX RPM");
     mi[1].type = MENU_TYPE_INT;
@@ -187,19 +200,7 @@ void menuSetup()
     mi[11].setValueID = CURRENT_DISPLAY;
     mi[11].intValueCurrent = CURRENT_VEHICLE_SPEED;
 
-    strcpy(mi[12].label, "TEST");
-    mi[12].type = MENU_TYPE_MENU;
-    mi[12].menuItemsCount = 2;
-    mi[12].m[0] = 13;
-    mi[12].m[2] = 0;
-
-    strcpy(mi[13].label, "LED");
-    mi[13].type = MENU_TYPE_SELECT;
-    mi[13].setValueID = VALUE_TEST;
-    mi[13].intValueCurrent = VALUE_TEST_LED;
-
     currentMenu = 0;
-
 }
 
 // --- */

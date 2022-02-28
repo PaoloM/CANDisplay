@@ -280,9 +280,11 @@ int WiFiManager::connectWifi(String ssid, String pass) {
   }
 
   int connRes = waitForConnectResult();
-  DEBUG_WM ("Connection result: ");
-  DEBUG_WM ( connRes );
-  //not connected, WPS enabled, no pass - first attempt
+  char cr[40];
+  sprintf(cr, "Connection result: %d", connRes);
+  DEBUG_WM(cr);
+  //  DEBUG_WM ( connRes );
+  // not connected, WPS enabled, no pass - first attempt
   if (_tryWPS && connRes != WL_CONNECTED && pass == "") {
     startWPS();
     //should be connected at the end of WPS

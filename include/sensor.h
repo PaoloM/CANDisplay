@@ -47,7 +47,9 @@
 #define          KY040_PIN_CLK                34
 #define          KY040_PIN_DT                 35
 #define          KY040_PIN_SW                 3
-#define          WS2812_PIN                   4
+#define          WS2812_PIN                   32
+#define          SN65HVD230_PIN_CTX           5
+#define          SN65HVD230_PIN_CRX           4
 #endif
 
 ///////////////////////////////// SSD1306 I2C OLED DISPLAY //////////////////////////////////
@@ -84,6 +86,7 @@
 static  uint8_t  KY040_PREV_NEXT_CODE       = 0;
 static  uint16_t KY040_STORE                = 0;
 static  int      KY040_STATUS_CURRENT       = KY040_STATUS_IDLE;
+volatile int     KY040_COUNTER              = 0;
 
 ///////////////////////////////// WS2812 RGB LEDs ///////////////////////////////////////////
 // IMPORTANT: To reduce NeoPixel burnout risk, add 1000 uF capacitor across
@@ -95,3 +98,38 @@ static  int      KY040_STATUS_CURRENT       = KY040_STATUS_IDLE;
 
 ///////////////////////////////// SN65HVD230 CAN Bus module /////////////////////////////////
 // (add some info)
+
+
+int getValueFromEEPROM(int value, int defvalue)
+{
+    int r = 0;
+
+  if (USE_EEPROM)
+  {
+    int address = value * 2;
+    r = EEPROM.readInt(address);
+    Serial.print("Reading v=");
+    Serial.print(r);
+    Serial.print(" from ");
+    Serial.println(value);
+  }
+  else
+  {
+      r = defvalue;
+  }
+    return r;
+}
+
+void saveValueToEEPROM(int p, int v)
+{
+  if (USE_EEPROM)
+  {
+    int address = p * 2;
+    EEPROM.writeInt(address, v);
+    EEPROM.commit();
+    Serial.print("Writing v=");
+    Serial.print(v);
+    Serial.print(" at ");
+    Serial.println(p);
+  }
+}
