@@ -50,6 +50,7 @@
 #define          WS2812_PIN                   32
 #define          SN65HVD230_PIN_CTX           5
 #define          SN65HVD230_PIN_CRX           4
+#define          PHOTORESISTOR_PIN            39
 #endif
 
 ///////////////////////////////// SSD1306 I2C OLED DISPLAY //////////////////////////////////
@@ -97,6 +98,9 @@ volatile int     KY040_COUNTER              = 0;
 #define          WS2812_NUMPIXELS             12 // strip.numPixels() returns are not reliable
 
 ///////////////////////////////// SN65HVD230 CAN Bus module /////////////////////////////////
+// (add some info)
+
+///////////////////////////////// GENERIC PHOTORESISTOR /////////////////////////////////////
 // (add some info)
 
 

@@ -33,7 +33,7 @@
 #define     USE_EEPROM               false              // use EEPROM for settings storage
 #define     USE_MQTT                 false              // connect and publish/subscribe to MQTT topics
 #define     USE_MQTT_GENERIC_TOPIC   false              // use the MQTT generic topic
-#define     USE_WIFI                 true               // use Wi-Fi
+#define     USE_WIFI                 false              // use Wi-Fi
 #define     USE_MENU                 true               // use the unified menu system
 
 // Template info (do not change after creating the initial structure)
@@ -52,4 +52,5 @@ int         JEEVES_SERVER_PORT     = 8080;              // Listening port of you
 #define     SENSOR_BMP280            false              // TODO ** use the BMP280 temperature and pressure sensor
 #define     SENSOR_PMS5003           false              // TODO ** use the PMS5003 Digital Particle Concentration Laser Sensor  **
 #define     SENSOR_WS2812            true               // use a series of WS2812 addressable RGB LEDs
-#define     SENSOR_SN65HVD230        true               // use a SN65HVD230 CAN Bus module
+#define     SENSOR_SN65HVD230        true               // use the SN65HVD230 CAN Bus module
+#define     SENSOR_PHOTORESISTOR     false              // use a generic photoresistor

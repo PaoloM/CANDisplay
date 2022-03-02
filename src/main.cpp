@@ -333,9 +333,9 @@ void sensorUpdateReadings()
   // saveInput(KNOB_SELECTED_INPUT);
 
   // - TEST DATA
-  v[CURRENT_ENGINE_SPEED] += 500;
-  if (v[CURRENT_ENGINE_SPEED] > v[PARAM_MAXRPM])
-    v[CURRENT_ENGINE_SPEED] = 0;
+  // v[CURRENT_ENGINE_SPEED] += 500;
+  // if (v[CURRENT_ENGINE_SPEED] > v[PARAM_MAXRPM])
+  //   v[CURRENT_ENGINE_SPEED] = 0;
   // - /TEST DATA
 
   if (SENSOR_DHT) // - DHTxx TEMPERATURE AND HUMIDITY SENSOR
@@ -395,6 +395,24 @@ void sensorUpdateReadings()
     {
       Serial.println("Forced measurement failed!");
     }
+  }
+
+  if (SENSOR_PHOTORESISTOR) // - Generic photoresistor
+  {
+    v[CURRENT_LIGHTLEVEL] = analogRead(PHOTORESISTOR_PIN);
+
+    if (v[CURRENT_LIGHTLEVEL] > v[PARAM_BRIGHTNESSTHRESHOLD]) 
+    {
+      v[CURRENT_BRIGHTNESS] = PARAM_BRIGHTNESSDAY;
+    } 
+    else
+    {
+      v[CURRENT_BRIGHTNESS] = PARAM_BRIGHTNESSNIGHT;
+    }
+
+    char s[80];
+    sprintf(s, "Light level=%d", v[CURRENT_LIGHTLEVEL]);
+    log_out("LIGHTLVL", s);
   }
 }
 
@@ -706,31 +724,35 @@ void sensorUpdateReadingsQuick()
 
     CAN_frame_t rx_frame;
     char s[80];
-    uint32_t msgID_RPM = 0x00000105;
+    uint32_t msgID_RPM = 135307264;
 
     // Receive next CAN frame from queue
     if (xQueueReceive(CAN_cfg.rx_queue, &rx_frame, 3 * portTICK_PERIOD_MS) == pdTRUE)
     {
-      for (int i = 0; i < rx_frame.FIR.B.DLC; i++)
+      // for (int i = 0; i < rx_frame.FIR.B.DLC; i++)
+      // {
+      //   // get data from bit 3 and 4 and save to temp array
+      //   if (i == 2 && rx_frame.MsgID == msgID_RPM)
+      //   {
+      //     sprintf(teml, "0x%02X ", rx_frame.data.u8[2]);
+      //   }
+      //   if (i == 3 && rx_frame.MsgID == msgID_RPM)
+      //   {
+      //     sprintf(temp, "0x%02X ", rx_frame.data.u8[3]);
+      //   }
+      // }
+      // // convert hex string from array to long int
+      // long int valueHex = strtol(temp, NULL, 16);  // convert hex string to decimal
+      // long int valueHex1 = strtol(teml, NULL, 16); // convert hex string to decimal
+      // // calculate values for engine_rpm
+      // long int finalRpm = 0.25 * (256 * valueHex + valueHex1);
+      if (rx_frame.MsgID == msgID_RPM)
       {
-        // get data from bit 3 and 4 and save to temp array
-        if (i == 2 && rx_frame.MsgID == msgID_RPM)
-        {
-          sprintf(teml, "0x%02X ", rx_frame.data.u8[2]);
-        }
-        if (i == 3 && rx_frame.MsgID == msgID_RPM)
-        {
-          sprintf(temp, "0x%02X ", rx_frame.data.u8[3]);
-        }
+        long int finalRpm = 0.25 * (256 * rx_frame.data.u8[2] + rx_frame.data.u8[3]);
+        v[CURRENT_ENGINE_SPEED] = finalRpm;
+        sprintf(s, STR_SN65HVD230_RPM_MESSAGE_FORMAT, msgID_RPM, finalRpm);
+        log_out(STR_SN65HVD230_LOG_PREFIX, s);
       }
-      // convert hex string from array to long int
-      long int valueHex = strtol(temp, NULL, 16);  // convert hex string to decimal
-      long int valueHex1 = strtol(teml, NULL, 16); // convert hex string to decimal
-      // calculate values for engine_rpm
-      long int finalRpm = 0.25 * (256 * valueHex + valueHex1);
-      v[CURRENT_ENGINE_SPEED] = finalRpm;
-      sprintf(s, STR_SN65HVD230_RPM_MESSAGE_FORMAT, msgID_RPM, finalRpm);
-      log_out(STR_SN65HVD230_LOG_PREFIX, s);
     }
   }
 
@@ -791,33 +813,29 @@ void sensorUpdateDisplay()
         char s[20];
         u8g2.clearBuffer();
 
-        if (USE_MENU)
+        u8g2.setFont(FONT_HEADER);
+        u8g2.drawStr(0, 16, mi[currentMenu].label);
+
+        switch (mi[currentMenu].type)
         {
-          u8g2.setFont(FONT_HEADER);
-          sprintf(s, "%s", mi[currentMenu].label);
-          u8g2.drawStr(0, 16, s);
+        case MENU_TYPE_MENU:
+        {
+          u8g2.setFont(FONT_BODY);
+          u8g2.drawStr(0, 40, mi[mi[currentMenu].m[mi[currentMenu].menuValueCurrent]].label);
+        }
+        break;
 
-          switch (mi[currentMenu].type)
-          {
-          case MENU_TYPE_MENU:
-          {
-            u8g2.setFont(FONT_BODY);
-            u8g2.drawStr(0, 40, mi[mi[currentMenu].m[mi[currentMenu].menuValueCurrent]].label);
-          }
+        case MENU_TYPE_INT:
+        {
+          u8g2.setFont(FONT_LARGE);
+          sprintf(s, "%d", mi[currentMenu].intValueCurrent);
+          u8g2.drawStr(0, 63, s);
+        }
+        break;
+
+        default:
           break;
-
-          case MENU_TYPE_INT:
-          {
-            u8g2.setFont(FONT_LARGE);
-            sprintf(s, "%d", mi[currentMenu].intValueCurrent);
-            u8g2.drawStr(0, 63, s);
-          }
-          break;
-
-          default:
-            break;
-          }
-        } // end of new unified menu system
+        }
 
         u8g2.sendBuffer();
       }

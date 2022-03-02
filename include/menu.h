@@ -73,9 +73,10 @@ const int MENU_VALUE_DISPLAY = 108;
 const int MENU_VALUE_DISPLAY_ENGINESPEEED = 109;
 const int MENU_VALUE_DISPLAY_VEHICLESPEED = 110;
 
-// --- Dynamic values (derived from CAN readings)
+// --- Dynamic values (derived from CAN readings or other sensors)
 const int CURRENT_ENGINE_SPEED = 0;                      /* From CAN Bus */
 const int CURRENT_VEHICLE_SPEED = 1;                     /* From CAN Bus */
+const int CURRENT_LIGHTLEVEL = 9;                        /* Light level from photoresistor */
 
 // --- Parameter values (to be persisted across power cycles)
 const int PARAM_MAXRPM = 2;
@@ -83,8 +84,9 @@ const int PARAM_BRIGHTNESSDAY = 3;
 const int PARAM_BRIGHTNESSNIGHT = 4;
 const int CURRENT_DISPLAY = 5;
 const int CURRENT_BRIGHTNESS = 6; /* PARAM_BRIGHTNESSDAY or PARAM_BRIGHTNESSNIGHT */
-const int VALUE_MINRPM = 7;                             /* typically 0 */
-const int VALUE_SHOW = 8;                               /* ? */
+const int VALUE_MINRPM = 7;                              /* typically 0 */
+const int VALUE_SHOW = 8;                                /* ? */
+const int PARAM_BRIGHTNESSTHRESHOLD = 10;
 
 void valuesSetup()
 {
@@ -98,10 +100,12 @@ void valuesSetup()
     strcpy(l[PARAM_MAXRPM], "MAX.RPM");
     strcpy(l[VALUE_MINRPM], "MIN.RPM");
     strcpy(l[VALUE_SHOW], "SHOW");
+    strcpy(l[CURRENT_LIGHTLEVEL], "LIGHT LEVEL");
+    strcpy(l[PARAM_BRIGHTNESSTHRESHOLD], "LIGHT THR.");
 
     // setup values
-    v[CURRENT_ENGINE_SPEED] = getValueFromEEPROM(CURRENT_ENGINE_SPEED, 4000);
-    v[CURRENT_VEHICLE_SPEED] = getValueFromEEPROM(CURRENT_VEHICLE_SPEED, 0);
+    v[CURRENT_ENGINE_SPEED] = 0;
+    v[CURRENT_VEHICLE_SPEED] = 0;
     v[PARAM_MAXRPM] = getValueFromEEPROM(PARAM_MAXRPM, 6000);
     v[PARAM_BRIGHTNESSDAY] = getValueFromEEPROM(PARAM_BRIGHTNESSDAY, 30);
     v[PARAM_BRIGHTNESSNIGHT] = getValueFromEEPROM(PARAM_BRIGHTNESSNIGHT, 10);
@@ -109,6 +113,8 @@ void valuesSetup()
     v[CURRENT_BRIGHTNESS] = getValueFromEEPROM(CURRENT_BRIGHTNESS, PARAM_BRIGHTNESSDAY);
     v[VALUE_MINRPM] = getValueFromEEPROM(VALUE_MINRPM, 0);
     v[VALUE_SHOW] = getValueFromEEPROM(VALUE_SHOW, MENU_VALUE_SHOW_INFO);
+    v[CURRENT_LIGHTLEVEL] = 0;
+    v[PARAM_BRIGHTNESSTHRESHOLD] = getValueFromEEPROM(PARAM_BRIGHTNESSTHRESHOLD, 2000);
 
     for (int i = 0; i < 15; i++)
     {
