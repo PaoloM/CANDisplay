@@ -62,14 +62,15 @@
 #include <ESP8266WiFi.h>      // ESP8266 WiFi driver
 #include <ESP8266mDNS.h>
 #include <SoftwareSerial.h> // Allows sensors to avoid the USB serial port
+#else
+#include <ESP32CAN.h> // Required for CAN support by miwagner/ESP32CAN@^0.0.1
+#include <CAN_config.h> // Required for CAN support by miwagner/ESP32CAN@^0.0.1
 #endif
 
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h> // Required for OTA updates
 #include <Wire.h>
 //#include <SPI.h> // Required for CAN support by coryjfowler/mcp_can@^1.5.0
-#include <ESP32CAN.h> // Required for CAN support by miwagner/ESP32CAN@^0.0.1
-#include <CAN_config.h> // Required for CAN support by miwagner/ESP32CAN@^0.0.1
 
 #include <time.h>
 
@@ -132,7 +133,9 @@ U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0,
 Adafruit_BMP280 bmp;                                                    // BMP280
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, WS2812_PIN,
                                             NEO_GRB + NEO_KHZ800);      // WS2812
+#ifdef ESP32                                            
 CAN_device_t CAN_cfg;                                                   // SN65HVD230
+#endif
 
 /*--------------------------- Utility functions  ----------------------------*/
 
@@ -517,13 +520,13 @@ void setup()
 
   if (USE_EEPROM)
   {
-    if (!EEPROM.begin(512))
-    {
-      Serial.println("Failed to initialise EEPROM");
-      Serial.println("Restarting...");
-      delay(1000);
-      ESP.restart();
-    }
+    // if (!EEPROM.begin(512))
+    // {
+    //   Serial.println("Failed to initialise EEPROM");
+    //   Serial.println("Restarting...");
+    //   delay(1000);
+    //   ESP.restart();
+    // }
   }
 
   wifiSetup();

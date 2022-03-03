@@ -292,6 +292,7 @@ void sensorSetup()
     strip.show(); // Initialize all pixels to 'off'
   }
 
+#ifdef ESP32
   if (SENSOR_SN65HVD230) // - SN65HVD230 CAN Bus module
   {
     const int rx_queue_size = 10; // Receive Queue size
@@ -305,6 +306,7 @@ void sensorSetup()
     sprintf(s, STR_SN65HVD230_STARTUP_MESSAGE_FORMAT, i);
     log_out(STR_SN65HVD230_LOG_PREFIX, s);
   }
+#endif
 }
 
 // ------------------------------------------------------------------------------------------
@@ -333,9 +335,9 @@ void sensorUpdateReadings()
   // saveInput(KNOB_SELECTED_INPUT);
 
   // - TEST DATA
-  // v[CURRENT_ENGINE_SPEED] += 500;
-  // if (v[CURRENT_ENGINE_SPEED] > v[PARAM_MAXRPM])
-  //   v[CURRENT_ENGINE_SPEED] = 0;
+  v[CURRENT_ENGINE_SPEED] += 500;
+  if (v[CURRENT_ENGINE_SPEED] > v[PARAM_MAXRPM])
+    v[CURRENT_ENGINE_SPEED] = 0;
   // - /TEST DATA
 
   if (SENSOR_DHT) // - DHTxx TEMPERATURE AND HUMIDITY SENSOR
@@ -700,6 +702,7 @@ void sensorUpdateReadingsQuick()
     }
   }
 
+#ifdef ESP32
   if (SENSOR_SN65HVD230) // - SN65HVD230 CAN Bus module
   {
     // Set all the values from the car
@@ -755,6 +758,7 @@ void sensorUpdateReadingsQuick()
       }
     }
   }
+#endif
 
   // TODO: Perform measurements on every loop
   /* code */
@@ -816,25 +820,16 @@ void sensorUpdateDisplay()
         u8g2.setFont(FONT_HEADER);
         u8g2.drawStr(0, 16, mi[currentMenu].label);
 
-        switch (mi[currentMenu].type)
-        {
-        case MENU_TYPE_MENU:
+        if (mi[currentMenu].type == MENU_TYPE_MENU) // menu navigation
         {
           u8g2.setFont(FONT_BODY);
           u8g2.drawStr(0, 40, mi[mi[currentMenu].m[mi[currentMenu].menuValueCurrent]].label);
         }
-        break;
-
-        case MENU_TYPE_INT:
+        else // display current value (RPM or MPH)
         {
           u8g2.setFont(FONT_LARGE);
           sprintf(s, "%d", mi[currentMenu].intValueCurrent);
           u8g2.drawStr(0, 63, s);
-        }
-        break;
-
-        default:
-          break;
         }
 
         u8g2.sendBuffer();

@@ -38,6 +38,12 @@
 #define          KY040_PIN_DT                 D6
 #define          KY040_PIN_SW                 D7
 #define          WS2812_PIN                   D3
+#define          PHOTORESISTOR_PIN            D3
+#define          MCP2515_PIN_SCK              
+#define          MCP2515_PIN_CS              
+#define          MCP2515_PIN_SI              
+#define          MCP2515_PIN_SO              
+
 #else
 #define          SSD1306_PIN_SCL              SCL
 #define          SSD1306_PIN_SDA              SDA
@@ -100,6 +106,9 @@ volatile int     KY040_COUNTER              = 0;
 ///////////////////////////////// SN65HVD230 CAN Bus module /////////////////////////////////
 // (add some info)
 
+///////////////////////////////// MCP2515 CAN Bus module ////////////////////////////////////
+// (add some info)
+
 ///////////////////////////////// GENERIC PHOTORESISTOR /////////////////////////////////////
 // (add some info)
 
@@ -111,7 +120,7 @@ int getValueFromEEPROM(int value, int defvalue)
   if (USE_EEPROM)
   {
     int address = value * 2;
-    r = EEPROM.readInt(address);
+ //   r = EEPROM.readInt(address);
     Serial.print("Reading v=");
     Serial.print(r);
     Serial.print(" from ");
@@ -129,7 +138,7 @@ void saveValueToEEPROM(int p, int v)
   if (USE_EEPROM)
   {
     int address = p * 2;
-    EEPROM.writeInt(address, v);
+//    EEPROM.writeInt(address, v);
     EEPROM.commit();
     Serial.print("Writing v=");
     Serial.print(v);
