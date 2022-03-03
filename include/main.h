@@ -61,16 +61,17 @@
 #include <WiFiManager.h>      // Required for AP support by tzapu/WiFiManager^0.16.0
 #include <ESP8266WiFi.h>      // ESP8266 WiFi driver
 #include <ESP8266mDNS.h>
-#include <SoftwareSerial.h> // Allows sensors to avoid the USB serial port
+#include <SoftwareSerial.h>   // Allows sensors to avoid the USB serial port
+#include <SPI.h>              // Required for CAN support by coryjfowler/mcp_can@^1.5.0
+#include <mcp_can.h>          // Required for CAN support by coryjfowler/mcp_can@^1.5.0
 #else
-#include <ESP32CAN.h> // Required for CAN support by miwagner/ESP32CAN@^0.0.1
-#include <CAN_config.h> // Required for CAN support by miwagner/ESP32CAN@^0.0.1
+#include <ESP32CAN.h>         // Required for CAN support by miwagner/ESP32CAN@^0.0.1
+#include <CAN_config.h>       // Required for CAN support by miwagner/ESP32CAN@^0.0.1
 #endif
 
 #include <WiFiUdp.h>
-#include <ArduinoOTA.h> // Required for OTA updates
+#include <ArduinoOTA.h>       // Required for OTA updates
 #include <Wire.h>
-//#include <SPI.h> // Required for CAN support by coryjfowler/mcp_can@^1.5.0
 
 #include <time.h>
 
@@ -135,6 +136,8 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, WS2812_PIN,
                                             NEO_GRB + NEO_KHZ800);      // WS2812
 #ifdef ESP32                                            
 CAN_device_t CAN_cfg;                                                   // SN65HVD230
+#else
+MCP_CAN CAN0(15);
 #endif
 
 /*--------------------------- Utility functions  ----------------------------*/

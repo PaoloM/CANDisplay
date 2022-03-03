@@ -39,11 +39,6 @@
 #define          KY040_PIN_SW                 D7
 #define          WS2812_PIN                   D3
 #define          PHOTORESISTOR_PIN            D3
-#define          MCP2515_PIN_SCK              
-#define          MCP2515_PIN_CS              
-#define          MCP2515_PIN_SI              
-#define          MCP2515_PIN_SO              
-
 #else
 #define          SSD1306_PIN_SCL              SCL
 #define          SSD1306_PIN_SDA              SDA

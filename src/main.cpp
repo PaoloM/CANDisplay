@@ -28,7 +28,7 @@
 #pragma GCC diagnostic ignored "-Wwrite-strings"
 
 #define SENSOR_TYPE "CANDISPLAY"     // type of sensor (keep it uppercase for display compatibility)
-#define VERSION     "0.2"            // firmware version
+#define VERSION     "0.3"            // firmware version
 #define MAIN_TOPIC  "candisplay"     // default MQTT topic (can be empty, typically lowercase)
 
 #define VALUE_COUNT 30
@@ -293,7 +293,7 @@ void sensorSetup()
   }
 
 #ifdef ESP32
-  if (SENSOR_SN65HVD230) // - SN65HVD230 CAN Bus module
+  if (SENSOR_SN65HVD230) // - SN65HVD230 CAN Bus module (ESP32 only)
   {
     const int rx_queue_size = 10; // Receive Queue size
     char s[80];
@@ -305,6 +305,11 @@ void sensorSetup()
     int i = ESP32Can.CANInit(); // Init CAN Module
     sprintf(s, STR_SN65HVD230_STARTUP_MESSAGE_FORMAT, i);
     log_out(STR_SN65HVD230_LOG_PREFIX, s);
+  }
+#else
+  if (SENSOR_MCP2515) // - MCP2515 CAN Bus module (ESP8266 only)
+  {
+
   }
 #endif
 }
@@ -335,9 +340,9 @@ void sensorUpdateReadings()
   // saveInput(KNOB_SELECTED_INPUT);
 
   // - TEST DATA
-  v[CURRENT_ENGINE_SPEED] += 500;
-  if (v[CURRENT_ENGINE_SPEED] > v[PARAM_MAXRPM])
-    v[CURRENT_ENGINE_SPEED] = 0;
+  // v[CURRENT_ENGINE_SPEED] += 500;
+  // if (v[CURRENT_ENGINE_SPEED] > v[PARAM_MAXRPM])
+  //   v[CURRENT_ENGINE_SPEED] = 0;
   // - /TEST DATA
 
   if (SENSOR_DHT) // - DHTxx TEMPERATURE AND HUMIDITY SENSOR
