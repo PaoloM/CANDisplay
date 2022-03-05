@@ -50,6 +50,12 @@
 #include "menu.h"    // Menu library
 
 /*--------------------------- Libraries ----------------------------------*/
+#include <Wire.h>
+#include <SPI.h>
+#include <time.h>
+#include <WiFiUdp.h>
+#include <ArduinoOTA.h>       // Required for OTA updates
+
 // External dependencies
 #include <Adafruit_Sensor.h> // Universal sensor library - adafruit/Adafruit Unified Sensor@^1.1.4
 #include <PubSubClient.h>    // Required for MQTT - knolleary/PubSubClient@^2.8
@@ -62,18 +68,11 @@
 #include <ESP8266WiFi.h>      // ESP8266 WiFi driver
 #include <ESP8266mDNS.h>
 #include <SoftwareSerial.h>   // Allows sensors to avoid the USB serial port
-#include <SPI.h>              // Required for CAN support by coryjfowler/mcp_can@^1.5.0
-#include <mcp_can.h>          // Required for CAN support by coryjfowler/mcp_can@^1.5.0
+#include <mcp2515.h>          // Required for CAN support by https://github.com/autowp/arduino-mcp2515
 #else
 #include <ESP32CAN.h>         // Required for CAN support by miwagner/ESP32CAN@^0.0.1
 #include <CAN_config.h>       // Required for CAN support by miwagner/ESP32CAN@^0.0.1
 #endif
-
-#include <WiFiUdp.h>
-#include <ArduinoOTA.h>       // Required for OTA updates
-#include <Wire.h>
-
-#include <time.h>
 
 /*--------------------------- Global Variables ---------------------------*/
 // MQTT general
@@ -137,7 +136,7 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, WS2812_PIN,
 #ifdef ESP32                                            
 CAN_device_t CAN_cfg;                                                   // SN65HVD230
 #else
-MCP_CAN CAN0(15);
+MCP2515 mcp2515(10);
 #endif
 
 /*--------------------------- Utility functions  ----------------------------*/
@@ -360,37 +359,36 @@ void mqttSetup()
     String res2 = "";
     char cmd[80];
 
+    strcpy(MQTT_BROKER, "jeeves"); // default name for the server
+
+#ifndef ESP32
     // get the location name from the Jeeves server
-    // sprintf(cmd, STR_GET_TAG_API_FORMAT, DEVICE_ID);
-    // int c = REST_CLIENT.get(cmd, &res);
+    sprintf(cmd, STR_GET_TAG_API_FORMAT, DEVICE_ID);
+    int c = REST_CLIENT.get(cmd, &res);
 
-    // sprintf(cmd, "%s%d", STR_STATUS_MESSAGE, c);
-    // log_out(STR_MQTT_LOG_PREFIX, cmd);
+    sprintf(cmd, "%s%d", STR_STATUS_MESSAGE, c);
+    log_out(STR_MQTT_LOG_PREFIX, cmd);
 
-    // // prepare the location for all MQTT messages coming from this sensor
-    // sprintf(MQTT_LOCATION, "%s", c != 200 ? STR_DEFAULT_LOCATION : res.c_str());
+    // prepare the location for all MQTT messages coming from this sensor
+    sprintf(MQTT_LOCATION, "%s", c != 200 ? STR_DEFAULT_LOCATION : res.c_str());
 
-    // // prepare the topic where default messages will be received
-    // sprintf(MQTT_CMD_TOPIC, "%s/%s", MQTT_LOCATION, STR_CMD_TOPIC);
+    // prepare the topic where default messages will be received
+    sprintf(MQTT_CMD_TOPIC, "%s/%s", MQTT_LOCATION, STR_CMD_TOPIC);
 
-    // sprintf(cmd, STR_CMD_TOPIC_LOG_FORMAT, MQTT_CMD_TOPIC);
-    // log_out(STR_MQTT_LOG_PREFIX, cmd);
+    sprintf(cmd, STR_CMD_TOPIC_LOG_FORMAT, MQTT_CMD_TOPIC);
+    log_out(STR_MQTT_LOG_PREFIX, cmd);
 
-    // // get the address of the MQTT broker from the Jeeves server
-    // c = REST_CLIENT.get(STR_GET_MQTT_BROKER_IP_API, &res2);
+    // get the address of the MQTT broker from the Jeeves server
+    c = REST_CLIENT.get(STR_GET_MQTT_BROKER_IP_API, &res2);
 
-    // sprintf(cmd, STR_BROKER_LOG_FORMAT, res2.c_str());
-    // log_out(STR_MQTT_LOG_PREFIX, cmd);
+    sprintf(cmd, STR_BROKER_LOG_FORMAT, res2.c_str());
+    log_out(STR_MQTT_LOG_PREFIX, cmd);
 
-    // // define the location of the MQTT broker
-    // sprintf(MQTT_BROKER, "%s", c != 200 ? STR_STATUS_UNKNOWN : res2.c_str());
+    // define the location of the MQTT broker
+    sprintf(MQTT_BROKER, "%s", c != 200 ? STR_STATUS_UNKNOWN : res2.c_str());
+#endif
 
     // Set up the MQTT client and callback
-
-    // *****************************
-    strcpy(MQTT_BROKER, "jeeves"); // TODO fix the rest call and then remove this
-    // *****************************
-
     MQTT_CLIENT.setServer(MQTT_BROKER, 1883);
     MQTT_CLIENT.setCallback(mqttCallback);
   }

@@ -309,7 +309,27 @@ void sensorSetup()
 #else
   if (SENSOR_MCP2515) // - MCP2515 CAN Bus module (ESP8266 only)
   {
+    char s[80];
+    MCP2515::ERROR err;
 
+    err = mcp2515.reset();
+    if (err != 0)
+    {
+      sprintf(s, "Reset error = %d", (int)err);
+      log_out("MCP2515 ", s);
+    }
+    err = mcp2515.setBitrate(CAN_500KBPS);
+    if (err != 0)
+    {
+      sprintf(s, "SetBitRate error = %d", (int)err);
+      log_out("MCP2515 ", s);
+    }
+    err = mcp2515.setNormalMode();
+    if (err != 0)
+    {
+      sprintf(s, "SetNormalMode error = %d", (int)err);
+      log_out("MCP2515 ", s);
+    }
   }
 #endif
 }
@@ -763,6 +783,31 @@ void sensorUpdateReadingsQuick()
       }
     }
   }
+#else
+// get the engine speed (RPM) value here
+  struct can_frame canMsg;
+  char s[80];
+  MCP2515::ERROR err;
+
+  err = mcp2515.readMessage(&canMsg);
+  if (err == MCP2515::ERROR_OK) {
+    Serial.print(canMsg.can_id, HEX); // print ID
+    Serial.print(" "); 
+    Serial.print(canMsg.can_dlc, HEX); // print DLC
+    Serial.print(" ");
+    
+    for (int i = 0; i<canMsg.can_dlc; i++)  {  // print the data
+      Serial.print(canMsg.data[i],HEX);
+      Serial.print(" ");
+    }
+    Serial.println();   
+  }
+    else
+    {
+      sprintf(s, "Read error = %d", (int)err);
+      log_out("MCP2515 ", s);
+    }
+
 #endif
 
   // TODO: Perform measurements on every loop
