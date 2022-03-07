@@ -324,7 +324,8 @@ void sensorSetup()
       sprintf(s, "SetBitRate error = %d", (int)err);
       log_out("MCP2515 ", s);
     }
-    err = mcp2515.setNormalMode();
+    err = mcp2515.setListenOnlyMode();
+//    err = mcp2515.setNormalMode();
     if (err != 0)
     {
       sprintf(s, "SetNormalMode error = %d", (int)err);
