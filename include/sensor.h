@@ -55,7 +55,7 @@
 #endif
 
 ///////////////////////////////// SSD1306 I2C OLED DISPLAY //////////////////////////////////
-// Default connections in I2C are SCL -> D1 and SDA -> D2, 3.3v to VCC
+// Default connections in I2C/ESP8266 are SCL -> D1 and SDA -> D2, 3.3v to VCC
 #include <U8g2lib.h> // olikraus/U8g2@^2.32.6
 #include <Wire.h>
 #define          SSD1306_SCREEN_WIDTH         128 // OLED display width, in pixels
