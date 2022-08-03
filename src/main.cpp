@@ -324,7 +324,8 @@ void sensorSetup()
       sprintf(s, "SetBitRate error = %d", (int)err);
       log_out("MCP2515 ", s);
     }
-    err = mcp2515.setNormalMode();
+    err = mcp2515.setListenOnlyMode();
+//    err = mcp2515.setNormalMode();
     if (err != 0)
     {
       sprintf(s, "SetNormalMode error = %d", (int)err);
@@ -751,39 +752,93 @@ void sensorUpdateReadingsQuick()
     // Turbocharger temperature:                   76(118)   7
 
     CAN_frame_t rx_frame;
-    char s[80];
+    char s[80], s1[80], s2[80], s3[80];
     uint32_t msgID_RPM = 135307264;
 
+
+// === Sample code ===
+  unsigned long currentMillis = millis();
+
+  // Receive next CAN frame from queue
+  if (xQueueReceive(CAN_cfg.rx_queue, &rx_frame, 3 * portTICK_PERIOD_MS) == pdTRUE) {
+
+    if (rx_frame.FIR.B.FF == CAN_frame_std) {
+      sprintf (s1, "New standard frame\t");
+    }
+    else {
+      sprintf (s1, "New extended frame\t");
+    }
+
+    if (rx_frame.FIR.B.RTR == CAN_RTR) {
+      sprintf(s2, "RTR from 0x%08X\tDLC\t%d\t", rx_frame.MsgID,  rx_frame.FIR.B.DLC);
+      sprintf(s3, "");
+    }
+    else {
+      sprintf(s2, "\tfrom 0x%08X\tDLC\t%d\tData\t", rx_frame.MsgID,  rx_frame.FIR.B.DLC);
+      sprintf(s3, "0x%02X\t0x%02X\t0x%02X\t0x%02X\t0x%02X\t0x%02X\t0x%02X\t0x%02X\t%03d\t%03d\t%03d\t%03d\t%03d\t%03d\t%03d\t%03d", 
+          rx_frame.data.u8[0],
+          rx_frame.data.u8[1],
+          rx_frame.data.u8[2],
+          rx_frame.data.u8[3],
+          rx_frame.data.u8[4],
+          rx_frame.data.u8[5],
+          rx_frame.data.u8[6],
+          rx_frame.data.u8[7],
+          rx_frame.data.u8[0],
+          rx_frame.data.u8[1],
+          rx_frame.data.u8[2],
+          rx_frame.data.u8[3],
+          rx_frame.data.u8[4],
+          rx_frame.data.u8[5],
+          rx_frame.data.u8[6],
+          rx_frame.data.u8[7]
+          );
+      sprintf(s, "%s%s%s", s1, s2, s3);
+      log_out(STR_SN65HVD230_LOG_PREFIX, s);
+    }
+  }
+
+    // Receive next CAN frame from queue
+    // if (xQueueReceive(CAN_cfg.rx_queue, &rx_frame, 3 * portTICK_PERIOD_MS) == pdTRUE)
+    // {
+    //   for (int i = 0; i < rx_frame.FIR.B.DLC; i++)
+    //   {
+    //     // get data from bit 3 and 4 and save to temp array
+    //     if (i == 2 && rx_frame.MsgID == msgID_RPM)
+    //     {
+    //       sprintf(teml, "0x%02X ", rx_frame.data.u8[2]);
+    //     }
+    //     if (i == 3 && rx_frame.MsgID == msgID_RPM)
+    //     {
+    //       sprintf(temp, "0x%02X ", rx_frame.data.u8[3]);
+    //     }
+    //   }
+
+    //   // convert hex string from array to long int
+    //   long int valueHex = strtol(temp, NULL, 16);  // convert hex string to decimal
+    //   long int valueHex1 = strtol(teml, NULL, 16); // convert hex string to decimal
+    //   // calculate values for engine_rpm
+    //   long int finalRpm = 0.25 * (256 * valueHex + valueHex1);
+    // }
+
+
+
+      // - Production code (need to validate CAN protocol used)
     // Receive next CAN frame from queue
     if (xQueueReceive(CAN_cfg.rx_queue, &rx_frame, 3 * portTICK_PERIOD_MS) == pdTRUE)
     {
-      // for (int i = 0; i < rx_frame.FIR.B.DLC; i++)
+      // if (rx_frame.MsgID == msgID_RPM)
       // {
-      //   // get data from bit 3 and 4 and save to temp array
-      //   if (i == 2 && rx_frame.MsgID == msgID_RPM)
-      //   {
-      //     sprintf(teml, "0x%02X ", rx_frame.data.u8[2]);
-      //   }
-      //   if (i == 3 && rx_frame.MsgID == msgID_RPM)
-      //   {
-      //     sprintf(temp, "0x%02X ", rx_frame.data.u8[3]);
-      //   }
+      //   long int finalRpm = 0.25 * (256 * rx_frame.data.u8[2] + rx_frame.data.u8[3]);
+      //   v[CURRENT_ENGINE_SPEED] = finalRpm;
+      //   sprintf(s, STR_SN65HVD230_RPM_MESSAGE_FORMAT, msgID_RPM, finalRpm);
+      //   log_out(STR_SN65HVD230_LOG_PREFIX, s);
       // }
-      // // convert hex string from array to long int
-      // long int valueHex = strtol(temp, NULL, 16);  // convert hex string to decimal
-      // long int valueHex1 = strtol(teml, NULL, 16); // convert hex string to decimal
-      // // calculate values for engine_rpm
-      // long int finalRpm = 0.25 * (256 * valueHex + valueHex1);
-      if (rx_frame.MsgID == msgID_RPM)
-      {
-        long int finalRpm = 0.25 * (256 * rx_frame.data.u8[2] + rx_frame.data.u8[3]);
-        v[CURRENT_ENGINE_SPEED] = finalRpm;
-        sprintf(s, STR_SN65HVD230_RPM_MESSAGE_FORMAT, msgID_RPM, finalRpm);
-        log_out(STR_SN65HVD230_LOG_PREFIX, s);
-      }
     }
   }
 #else
+if (SENSOR_MCP2515)
+{
 // get the engine speed (RPM) value here
   struct can_frame canMsg;
   char s[80];
@@ -807,7 +862,7 @@ void sensorUpdateReadingsQuick()
       sprintf(s, "Read error = %d", (int)err);
       log_out("MCP2515 ", s);
     }
-
+}
 #endif
 
   // TODO: Perform measurements on every loop

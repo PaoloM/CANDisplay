@@ -82,7 +82,7 @@
 #define STR_SENSOR_ERROR_DHT_HUMIDITY            "Error reading humidity!"
 
 #define STR_SN65HVD230_STARTUP_MESSAGE_FORMAT    "Init (result=%d)"
-#define STR_SN65HVD230_RPM_MESSAGE_FORMAT        "Received ENGINE_SPEED(%08X) = %d"
+#define STR_SN65HVD230_RPM_MESSAGE_FORMAT        "Received ENGINE_SPEED(%08X) = %ld"
 
 // CANDISPLAY specific strings --------------------------------------------------
 
