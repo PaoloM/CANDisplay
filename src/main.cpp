@@ -760,30 +760,26 @@ void sensorUpdateReadingsQuick()
   unsigned long currentMillis = millis();
 
   // Receive next CAN frame from queue
-  if (xQueueReceive(CAN_cfg.rx_queue, &rx_frame, 3 * portTICK_PERIOD_MS) == pdTRUE) {
+//  if (xQueueReceive(CAN_cfg.rx_queue, &rx_frame, 3 * portTICK_PERIOD_MS) == pdTRUE) {
+  if (xQueueReceive(CAN_cfg.rx_queue, &rx_frame, portTICK_PERIOD_MS) == pdTRUE) {
 
-    if (rx_frame.FIR.B.FF == CAN_frame_std) {
-      sprintf (s1, "New standard frame\t");
-    }
-    else {
-      sprintf (s1, "New extended frame\t");
-    }
+    sprintf(s1, "");
+    sprintf(s2, "");
+    sprintf(s3, "");
+
+    // if (rx_frame.FIR.B.FF == CAN_frame_std) {
+    //   sprintf (s1, "New standard frame\t");
+    // }
+    // else {
+    //   sprintf (s1, "New extended frame\t");
+    // }
 
     if (rx_frame.FIR.B.RTR == CAN_RTR) {
       sprintf(s2, "RTR from 0x%08X\tDLC\t%d\t", rx_frame.MsgID,  rx_frame.FIR.B.DLC);
-      sprintf(s3, "");
     }
     else {
-      sprintf(s2, "\tfrom 0x%08X\tDLC\t%d\tData\t", rx_frame.MsgID,  rx_frame.FIR.B.DLC);
-      sprintf(s3, "0x%02X\t0x%02X\t0x%02X\t0x%02X\t0x%02X\t0x%02X\t0x%02X\t0x%02X\t%03d\t%03d\t%03d\t%03d\t%03d\t%03d\t%03d\t%03d", 
-          rx_frame.data.u8[0],
-          rx_frame.data.u8[1],
-          rx_frame.data.u8[2],
-          rx_frame.data.u8[3],
-          rx_frame.data.u8[4],
-          rx_frame.data.u8[5],
-          rx_frame.data.u8[6],
-          rx_frame.data.u8[7],
+      sprintf(s2, "0x%08X\t", rx_frame.MsgID);
+      sprintf(s3, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d", 
           rx_frame.data.u8[0],
           rx_frame.data.u8[1],
           rx_frame.data.u8[2],
@@ -794,7 +790,7 @@ void sensorUpdateReadingsQuick()
           rx_frame.data.u8[7]
           );
       sprintf(s, "%s%s%s", s1, s2, s3);
-      log_out(STR_SN65HVD230_LOG_PREFIX, s);
+      Serial.println(s);
     }
   }
 
@@ -823,7 +819,7 @@ void sensorUpdateReadingsQuick()
 
 
 
-      // - Production code (need to validate CAN protocol used)
+    // - Production code (need to validate CAN protocol used)
     // Receive next CAN frame from queue
     if (xQueueReceive(CAN_cfg.rx_queue, &rx_frame, 3 * portTICK_PERIOD_MS) == pdTRUE)
     {
