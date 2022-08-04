@@ -753,11 +753,10 @@ void sensorUpdateReadingsQuick()
 
     CAN_frame_t rx_frame;
     char s[80], s1[80], s2[80], s3[80];
-    uint32_t msgID_RPM = 135307264;
+    uint32_t msgID_RPM = 102277121; // 0x0618A001
 
 
 // === Sample code ===
-  unsigned long currentMillis = millis();
 
   // Receive next CAN frame from queue
 //  if (xQueueReceive(CAN_cfg.rx_queue, &rx_frame, 3 * portTICK_PERIOD_MS) == pdTRUE) {
@@ -821,11 +820,11 @@ void sensorUpdateReadingsQuick()
 
     // - Production code (need to validate CAN protocol used)
     // Receive next CAN frame from queue
-    if (xQueueReceive(CAN_cfg.rx_queue, &rx_frame, 3 * portTICK_PERIOD_MS) == pdTRUE)
+    if (xQueueReceive(CAN_cfg.rx_queue, &rx_frame, portTICK_PERIOD_MS) == pdTRUE)
     {
       // if (rx_frame.MsgID == msgID_RPM)
       // {
-      //   long int finalRpm = 0.25 * (256 * rx_frame.data.u8[2] + rx_frame.data.u8[3]);
+      //   long int finalRpm = 0.125 * (256 * rx_frame.data.u8[6] + rx_frame.data.u8[7]);
       //   v[CURRENT_ENGINE_SPEED] = finalRpm;
       //   sprintf(s, STR_SN65HVD230_RPM_MESSAGE_FORMAT, msgID_RPM, finalRpm);
       //   log_out(STR_SN65HVD230_LOG_PREFIX, s);
