@@ -55,6 +55,13 @@ Home  <ShowDefaultScreen()>
 
 The FIAT 500 Abarth is KWP FAST CAN 29bit, its using the ISO ISO15765-4 protocol.
 
+Four variants of ISO15765 exist. They differ only in identifier length and bus speed:
+
+ISO 15765-4 CAN (11 bit ID,500 Kbaud)
+ISO 15765-4 CAN (29 bit ID,500 Kbaud)
+ISO 15765-4 CAN (11 bit ID,250 Kbaud)
+ISO 15765-4 CAN (29 bit ID,250 Kbaud)
+
 https://www.fiat500owners.com/threads/fiat-obd2-protocol.100978/
 
 http://www.obdtester.com/obd2_protocols
