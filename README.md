@@ -53,7 +53,7 @@ Home  <ShowDefaultScreen()>
     * F1 // (GREENx1/3, YELLOWx1/3, BLUEx1/3, BLUE BLINKxALL)
   * Exit -> Home
 
-The FIAT 500 Abarth is KWP FAST CAN 29bit, its using the ISO ISO15765-4 protocol.
+The FIAT 500 Abarth is KWP FAST CAN 29bit, its using the ISO 15765-4 protocol.
 
 Four variants of ISO15765 exist. They differ only in identifier length and bus speed:
 

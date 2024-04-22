@@ -28,21 +28,6 @@
 #include <Arduino.h>
 #include "EEPROM.h"
 
-#ifdef ESP32
-#include <WiFi.h> //https://github.com/esp8266/Arduino
-#else
-#include <ESP8266WiFi.h> //https://github.com/esp8266/Arduino
-#endif
-
-// needed for library
-#include <DNSServer.h>
-#if defined(ESP8266)
-#include <ESP8266WebServer.h>
-#else
-#include <WebServer.h>
-#endif
-#include <WiFiManager.h> //https://github.com/tzapu/WiFiManager
-
 /*--------------------------- Configuration ------------------------------*/
 #include "config.h"  // Specific thing configuration
 #include "sensor.h"  // Sensor-specific data
@@ -52,48 +37,15 @@
 /*--------------------------- Libraries ----------------------------------*/
 #include <Wire.h>
 #include <SPI.h>
-#include <time.h>
-#include <WiFiUdp.h>
-#include <ArduinoOTA.h>       // Required for OTA updates
 
 // External dependencies
 #include <Adafruit_Sensor.h> // Universal sensor library - adafruit/Adafruit Unified Sensor@^1.1.4
-#include <PubSubClient.h>    // Required for MQTT - knolleary/PubSubClient@^2.8
-#include "RestClient.h"      // Required to access Jeeves services - hal9k-dk/ESP8266 REST client SSL@^2.1.0
 
-#ifndef ESP32
-#include <DNSServer.h>        // Required for AP support by tzapu/WiFiManager^0.16.0
-#include <ESP8266WebServer.h> // Required for AP support by tzapu/WiFiManager^0.16.0
-#include <WiFiManager.h>      // Required for AP support by tzapu/WiFiManager^0.16.0
-#include <ESP8266WiFi.h>      // ESP8266 WiFi driver
-#include <ESP8266mDNS.h>
-#include <SoftwareSerial.h>   // Allows sensors to avoid the USB serial port
-#include <mcp2515.h>          // Required for CAN support by https://github.com/autowp/arduino-mcp2515
-#else
-#include <ESP32CAN.h>         // Required for CAN support by miwagner/ESP32CAN@^0.0.1
-#include <CAN_config.h>       // Required for CAN support by miwagner/ESP32CAN@^0.0.1
-#endif
+#include <esp32_can.h> // CAN library - collin80/can_common@^0.4.0
 
 /*--------------------------- Global Variables ---------------------------*/
-// MQTT general
-const char *MQTT_STATUS_TOPIC = "Events"; // MQTT topic to report startup events
-char MQTT_BROKER[20];                     // IP address of your MQTT broker
-char MQTT_MESSAGE_BUFFER[150];            // General purpose buffer for MQTT messages
-char MQTT_CMD_TOPIC[50];                  // MQTT topic for receiving commands
-char MQTT_LOCATION[50];                   // Room/area where the sensor is located
-bool MQTT_REPORT_TIMESTAMP = true;        // Report timestamp as a separate topic
-
-// Wifi
-#define WIFI_CONNECT_INTERVAL 500    // Wait 500ms intervals for wifi connection
-#define WIFI_CONNECT_MAX_ATTEMPTS 10 // Number of attempts/intervals to wait
-
 // General
 uint32_t DEVICE_ID; // Unique ID from ESP chip ID
-
-// Time/NTP
-const char *ntpServer = "pool.ntp.org";
-const long gmtOffset_sec = 28800;    // Replace with your GMT offset (seconds)
-const int daylightOffset_sec = 3600; // Replace with your daylight offset (seconds)
 
 // Loop timer
 unsigned int previousUpdateTime = millis();
@@ -109,35 +61,19 @@ bool SCREEN_ACTIVE = false;
 #define ESP_WAKEUP_PIN D0     // To reset ESP8266 after deep sleep
 
 /*--------------------------- Function Signatures ---------------------------*/
-void mqttCallback(char *topic, byte *payload, uint8_t length);
-bool initWifi();
-void reconnectMqtt();
-void sensorReportToMqtt(bool emitTimestamp);
-void sensorReportToSerial();
 void sensorUpdateReadings();
 void sensorUpdateReadingsQuick();
 void sensorUpdateDisplay();
 void sensorSetup();
-void sensorMqttSetup();
 
 /*--------------------------- Instantiate Global Objects --------------------*/
-WiFiClient ESP_CLIENT;                                                  // WiFi
-PubSubClient MQTT_CLIENT(ESP_CLIENT);                                   // MQTT
-RestClient REST_CLIENT = RestClient(JEEVES_SERVER, JEEVES_SERVER_PORT); // Jeeves server connection
-LiquidCrystal_I2C lcd(HD44780_SCREEN_ADDRESS, 20, 4);                   // set the LCD address to 0x27 for a 16 chars and 2 line display
-DHT_Unified dht(DHT_PIN, DHT_TYPE);
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0,
                                          U8X8_PIN_NONE,
                                          SSD1306_PIN_SCL,
                                          SSD1306_PIN_SDA);              // All Boards without Reset of the Display
-Adafruit_BMP280 bmp;                                                    // BMP280
+
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, WS2812_PIN,
                                             NEO_GRB + NEO_KHZ800);      // WS2812
-#ifdef ESP32                                            
-CAN_device_t CAN_cfg;                                                   // SN65HVD230
-#else
-MCP2515 mcp2515(10);
-#endif
 
 /*--------------------------- Utility functions  ----------------------------*/
 
@@ -167,19 +103,6 @@ void printToSerialTopicAndValue(char *topic, String value)
     char out[80];
     sprintf(out, "%s = %s", topic, value.c_str());
     log_out(STR_MQTT_LOG_PREFIX, out);
-  }
-}
-
-void sendToMqttTopicAndValue(char *topic, String value)
-{
-  if (USE_MQTT)
-  {
-    String _value;
-    char buffer[255]; // General purpose buffer for MQTT messages
-
-    _value = value;
-    _value.toCharArray(buffer, _value.length() + 1);
-    MQTT_CLIENT.publish(topic, buffer);
   }
 }
 
@@ -349,175 +272,15 @@ void theaterChaseRainbow(uint8_t wait)
   }
 }
 
-
-/*--------------------------- MQTT ---------------------------------------*/
-void mqttSetup()
-{
-  if (USE_WIFI && USE_MQTT)
-  {
-    String res = "";
-    String res2 = "";
-    char cmd[80];
-
-    strcpy(MQTT_BROKER, "jeeves"); // default name for the server
-
-#ifndef ESP32
-    // get the location name from the Jeeves server
-    sprintf(cmd, STR_GET_TAG_API_FORMAT, DEVICE_ID);
-    int c = REST_CLIENT.get(cmd, &res);
-
-    sprintf(cmd, "%s%d", STR_STATUS_MESSAGE, c);
-    log_out(STR_MQTT_LOG_PREFIX, cmd);
-
-    // prepare the location for all MQTT messages coming from this sensor
-    sprintf(MQTT_LOCATION, "%s", c != 200 ? STR_DEFAULT_LOCATION : res.c_str());
-
-    // prepare the topic where default messages will be received
-    sprintf(MQTT_CMD_TOPIC, "%s/%s", MQTT_LOCATION, STR_CMD_TOPIC);
-
-    sprintf(cmd, STR_CMD_TOPIC_LOG_FORMAT, MQTT_CMD_TOPIC);
-    log_out(STR_MQTT_LOG_PREFIX, cmd);
-
-    // get the address of the MQTT broker from the Jeeves server
-    c = REST_CLIENT.get(STR_GET_MQTT_BROKER_IP_API, &res2);
-
-    sprintf(cmd, STR_BROKER_LOG_FORMAT, res2.c_str());
-    log_out(STR_MQTT_LOG_PREFIX, cmd);
-
-    // define the location of the MQTT broker
-    sprintf(MQTT_BROKER, "%s", c != 200 ? STR_STATUS_UNKNOWN : res2.c_str());
-#endif
-
-    // Set up the MQTT client and callback
-    MQTT_CLIENT.setServer(MQTT_BROKER, 1883);
-    MQTT_CLIENT.setCallback(mqttCallback);
-  }
-}
-
-/*--------------------------- WIFI ---------------------------------------*/
-void wifiSetup()
-{
-  if (USE_WIFI)
-  {
-    WiFiManager wifiManager;
-    // wifiManager.resetSettings(); // uncomment this to reset the device EEPROM
-    wifiManager.autoConnect("Jeeves.AP"); // define the default access point to set wifi credentials
-    WiFi.setAutoReconnect(true);
-    WiFi.persistent(true);
-  }
-}
-
-/*--------------------------- SERIAL ---------------------------------------*/
-void serialSetup()
-{
-  // Setup communication with the serial monitor
-  Serial.begin(SERIAL_BAUD_RATE);
-  delay(500); // wait for the serial to start
-  Serial.println();
-  Serial.println();
-
-  char s[255];
-  sprintf(s, STR_STARTUP_MESSAGE_FORMAT, SENSOR_TYPE);
-  log_out(STR_STARTUP_LOG_PREFIX, s);
-  sprintf(s, STR_STARTUP_VERSION_MESSAGE_FORMAT, VERSION);
-  log_out(STR_STARTUP_LOG_PREFIX, s);
-  sprintf(s, STR_STARTUP_DEVICE_MESSAGE_FORMAT, DEVICE_ID);
-  log_out(STR_STARTUP_LOG_PREFIX, s);
-}
-
-/*--------------------------- OTA ---------------------------------------*/
-void otaSetup()
-{
-  // Port defaults to 8266
-  // ArduinoOTA.setPort(8266);
-
-  // Hostname defaults to esp8266-[ChipID]
-  // ArduinoOTA.setHostname("myesp8266");
-
-  // No authentication by default
-  // ArduinoOTA.setPassword("admin");
-
-  // Password can be set with it's md5 value as well
-  // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
-  // ArduinoOTA.setPasswordHash("21232f297a57a5a743894a0e4a801fc3");
-
-  ArduinoOTA.onStart([]()
-                     {
-                       char s[255];
-
-                       String type;
-                       if (ArduinoOTA.getCommand() == U_FLASH)
-                       {
-                         type = "sketch";
-                       }
-                       else
-                       {
-                         type = "filesystem";
-                       }
-
-                       // NOTE: if updating FS this would be the place to unmount FS using FS.end()
-                       sprintf(s, STR_OTA_START_UPDATE_MESSAGE, type.c_str());
-                       log_out(STR_OTA_LOG_PREFIX, s); });
-
-  ArduinoOTA.onEnd([]()
-                   { log_out(STR_OTA_LOG_PREFIX, STR_OTA_END_UPDATE_MESSAGE); });
-
-  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total)
-                        {
-                          char s[255];
-                          sprintf(s, STR_OTA_UPDATE_PROGRESS_FORMAT, (progress / (total / 100)));
-                          log_out(STR_OTA_LOG_PREFIX, s); });
-
-  ArduinoOTA.onError([](ota_error_t error)
-                     {
-                       char se[255];
-                       if (error == OTA_AUTH_ERROR)
-                       {
-                         sprintf(se, STR_OTA_ERROR_MESSAGE_FORMAT, error, STR_OTA_ERROR_AUTH_FAILED);
-                       }
-                       else if (error == OTA_BEGIN_ERROR)
-                       {
-                         sprintf(se, STR_OTA_ERROR_MESSAGE_FORMAT, error, STR_OTA_ERROR_BEGIN_FAILED);
-                       }
-                       else if (error == OTA_CONNECT_ERROR)
-                       {
-                         sprintf(se, STR_OTA_ERROR_MESSAGE_FORMAT, error, STR_OTA_ERROR_CONNECT_FAILED);
-                       }
-                       else if (error == OTA_RECEIVE_ERROR)
-                       {
-                         sprintf(se, STR_OTA_ERROR_MESSAGE_FORMAT, error, STR_OTA_ERROR_RECEIVE_FAILED);
-                       }
-                       else if (error == OTA_END_ERROR)
-                       {
-                         sprintf(se, STR_OTA_ERROR_MESSAGE_FORMAT, error, STR_OTA_ERROR_END_FAILED);
-                       }
-                       log_out(STR_OTA_LOG_PREFIX, se); });
-
-  ArduinoOTA.begin();
-}
-
-/*--------------------------- TIME/NTP ---------------------------------------*/
-void timeSetup()
-{
-  // init and get the time
-  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-}
-
 /*--------------------------- Program ---------------------------------------*/
 void setup()
 {
-#ifdef ESP32
   uint32_t chipId = 0;
   for (int i = 0; i < 17; i = i + 8)
   {
     chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
   }
   DEVICE_ID = chipId;
-#else
-  DEVICE_ID = ESP.getChipId(); // Get the unique ID of the ESP8266 chip
-#endif
-
-  serialSetup();
 
   if (USE_EEPROM)
   {
@@ -530,19 +293,13 @@ void setup()
     // }
   }
 
-  wifiSetup();
-  timeSetup();
-  otaSetup();
-  mqttSetup();
   valuesSetup();
   menuSetup();
   sensorSetup();
-  sensorMqttSetup();
 }
 
 void loop()
 {
-#ifdef ESP32
   // Special code to handle KY-040 rotary encoder on ESP32
   // from https://garrysblog.com/2021/03/20/reliably-debouncing-rotary-encoders-with-arduino-and-esp32/
   static int lastCounter = 0;
@@ -570,65 +327,12 @@ void loop()
         ;
     }
   }
-#else
-  // Special code to handle KY-040 rotary encoder on ESP8266
-  // from https://www.best-microcontroller-projects.com/rotary-encoder.html
-  static int8_t c, val;
-
-  if ((val = read_rotary()))
-  {
-    c += val;
-
-    if (KY040_PREV_NEXT_CODE == 0x0b)
-    {
-      KY040_STATUS_CURRENT = KY040_STATUS_GOINGUP;
-    }
-
-    if (KY040_PREV_NEXT_CODE == 0x07)
-    {
-      KY040_STATUS_CURRENT = KY040_STATUS_GOINGDOWN;
-    }
-  }
-
-  if (digitalRead(KY040_PIN_SW) == 0)
-  {
-    delay(10);
-    if (digitalRead(KY040_PIN_SW) == 0)
-    {
-      KY040_STATUS_CURRENT = KY040_STATUS_PRESSED;
-      while (digitalRead(KY040_PIN_SW) == 0)
-        ;
-    }
-  }
-  // - end of KY040 ESP8266 debounce code
-#endif
-
-  if (USE_WIFI)
-  {
-    if (WiFi.status() == WL_CONNECTED)
-    {
-      if (USE_MQTT)
-      {
-        if (!MQTT_CLIENT.connected())
-        {
-          reconnectMqtt();
-        }
-      }
-    }
-
-    if (USE_MQTT)
-    {
-      MQTT_CLIENT.loop(); // process any outstanding MQTT messages
-    }
-  }
 
   sensorUpdateReadingsQuick(); // get the data from sensors at max speed
 
   if (millis() - previousUpdateTime >= DELAY_MS)
   {
     sensorUpdateReadings();                    // get the data from sensors
-    sensorReportToMqtt(MQTT_REPORT_TIMESTAMP); // send messages to the MQTT broker
-    sensorReportToSerial();                    // print the data on the serial port
     sensorUpdateDisplay();                     // update the local display, if present
     previousUpdateTime = millis();
   }
@@ -645,31 +349,4 @@ void loop()
     screenTimeoutTimer = millis();
   }
 
-  if (USE_WIFI)
-    ArduinoOTA.handle(); // see if there is an OTA update request
-}
-
-void reconnectMqtt()
-{
-  char mqtt_client_id[20];
-  sprintf(mqtt_client_id, "Jeeves-%06X", DEVICE_ID);
-
-  // Loop until we're reconnected
-  while (!MQTT_CLIENT.connected())
-  {
-    // Attempt to connect
-    if (MQTT_CLIENT.connect(mqtt_client_id))
-    {
-      // Once connected, publish an announcement
-      sprintf(MQTT_MESSAGE_BUFFER, STR_MQTT_STARTUP_MESSAGE_FORMAT, mqtt_client_id);
-      MQTT_CLIENT.publish(MQTT_STATUS_TOPIC, MQTT_MESSAGE_BUFFER);
-      // Resubscribe
-      MQTT_CLIENT.subscribe(MQTT_CMD_TOPIC);
-    }
-    else
-    {
-      // Wait 5 seconds before retrying
-      delay(5000);
-    }
-  }
 }

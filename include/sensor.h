@@ -28,18 +28,7 @@
 // ------------------------------------------------------------------------------------------
 // PINOUTS
 // ------------------------------------------------------------------------------------------
-#ifndef ESP32
-#define          SSD1306_PIN_SCL              D1
-#define          SSD1306_PIN_SDA              D2
-#define          BMP280_PIN_SCL               D3
-#define          BMP280_PIN_SDA               D4
-#define          DHT_PIN                      D3
-#define          KY040_PIN_CLK                D5
-#define          KY040_PIN_DT                 D6
-#define          KY040_PIN_SW                 D7
-#define          WS2812_PIN                   D3
-#define          PHOTORESISTOR_PIN            D3
-#else
+
 #define          SSD1306_PIN_SCL              SCL
 #define          SSD1306_PIN_SDA              SDA
 #define          BMP280_PIN_SCL               SCL
@@ -52,7 +41,6 @@
 #define          SN65HVD230_PIN_CTX           5
 #define          SN65HVD230_PIN_CRX           4
 #define          PHOTORESISTOR_PIN            39
-#endif
 
 ///////////////////////////////// SSD1306 I2C OLED DISPLAY //////////////////////////////////
 // Default connections in I2C/ESP8266 are SCL -> D1 and SDA -> D2, 3.3v to VCC
@@ -60,24 +48,6 @@
 #include <Wire.h>
 #define          SSD1306_SCREEN_WIDTH         128 // OLED display width, in pixels
 #define          SSD1306_SCREEN_HEIGHT        64  // OLED display height, in pixels
-
-///////////////////////////////// BMP280 TEMPERATURE, PRESSURE, ALTITUDE SENSOR /////////////
-// (add some info)
-#include <Adafruit_BMP280.h>
-
-///////////////////////////////// DHTxx TEMPERATURE AND HUMIDITY SENSOR //////////////////////
-// (add some info)
-#include <DHT.h> // adafruit/DHT sensor library@^1.4.3
-#include <DHT_U.h>
-#define          DHT_TEMPERATURE_IN_FARENHEIT true
-#define          DHT_TYPE                     DHT11     // DHT 11
-//#define          DHT_TYPE                     DHT22     // DHT 22 (AM2302)
-//#define          DHT_TYPE                     DHT21     // DHT 21 (AM2301)
-
-///////////////////////////////// HD44780 16x2 LCD DISPLAY ///////////////////////////////////
-// (add some info)
-#include <LiquidCrystal_I2C.h> // marcoschwartz/LiquidCrystal_I2C@^1.1.4                
-#define          HD44780_SCREEN_ADDRESS       0x27 // 0x27 for 16x2 characters
 
 ///////////////////////////////// KY-040 ROTARY ENCODER //////////////////////////////////////
 // (add some info)
@@ -99,9 +69,6 @@ volatile int     KY040_COUNTER              = 0;
 #define          WS2812_NUMPIXELS             12 // strip.numPixels() returns are not reliable
 
 ///////////////////////////////// SN65HVD230 CAN Bus module /////////////////////////////////
-// (add some info)
-
-///////////////////////////////// MCP2515 CAN Bus module ////////////////////////////////////
 // (add some info)
 
 ///////////////////////////////// GENERIC PHOTORESISTOR /////////////////////////////////////

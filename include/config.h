@@ -31,27 +31,16 @@
 #define     SPLASH_SCREEN_DELAY      2000               // milliseconds before splash screen dismissal
 #define     SCREEN_TIMEOUT_DELAY     5000               // milliseconds before screen timeout
 #define     USE_EEPROM               false              // use EEPROM for settings storage
-#define     USE_MQTT                 false              // connect and publish/subscribe to MQTT topics
-#define     USE_MQTT_GENERIC_TOPIC   false              // use the MQTT generic topic
-#define     USE_WIFI                 false               // use Wi-Fi
 #define     USE_MENU                 true               // use the unified menu system
 
 // Template info (do not change after creating the initial structure)
 #define     BOILERPLATE_VERSION      1.7                // version and date of the boilerplate template 
 #define     BOILERPLATE_DATE         2021-12-18         // that this implementation is based on
 
-// Jeeves server connection
-const char* JEEVES_SERVER          = "jeeves";          // IP address of your Jeeves server
-int         JEEVES_SERVER_PORT     = 8080;              // Listening port of your Jeeves server
-
 // Onboard sensors configuration
 #define     SENSOR_SSD1306           true               // use the SSD1306 124x64 OLED display
 #define     SENSOR_HD74480           false              // use the HD44780 16x2 LCD display
 #define     SENSOR_KY040             true               // use the KY-040 rotary encoder
-#define     SENSOR_DHT               false              // use the DHTxx temperature and humidity sensor
-#define     SENSOR_BMP280            false              // TODO ** use the BMP280 temperature and pressure sensor
-#define     SENSOR_PMS5003           false              // TODO ** use the PMS5003 Digital Particle Concentration Laser Sensor  **
 #define     SENSOR_WS2812            true               // use a series of WS2812 addressable RGB LEDs
 #define     SENSOR_SN65HVD230        true               // use the SN65HVD230 CAN Bus module (ESP32)
 #define     SENSOR_PHOTORESISTOR     false              // use a generic photoresistor
-#define     SENSOR_MCP2515           false              // use the MCP2515 CAN Bus module (ESP8266)
