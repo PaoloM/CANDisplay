@@ -482,6 +482,7 @@ void sensorUpdateReadingsQuick()
 
     if (CAN0.read(can_message))
     {
+#if DEBUG      
       Serial.print("CAN MSG: 0x");
       Serial.print(can_message.id, HEX);
       Serial.print(" [");
@@ -494,6 +495,12 @@ void sensorUpdateReadingsQuick()
         Serial.print(can_message.data.byte[i], HEX);
       }
       Serial.println(">");
+#else
+      if (can_message.id == FRAME_ID_ENGINE_SPEED_DEC)
+      {
+        v[CURRENT_ENGINE_SPEED] = 256 * can_message.data.byte[2] + can_message.data.byte[3];
+      }
+#endif
     }
 
   // TODO: Perform measurements on every loop

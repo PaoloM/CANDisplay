@@ -25,7 +25,7 @@
 // SOFTWARE.
 // ==========================================================================================
 
-#define     DEBUG                    true               // true to show messages on the Serial monitor
+#define     DEBUG                    false              // true to show messages on the Serial monitor
 
 #define     DELAY_MS                 500                // milliseconds between sensor readings
 #define     SPLASH_SCREEN_DELAY      2000               // milliseconds before splash screen dismissal

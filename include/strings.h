@@ -86,3 +86,5 @@
 
 // CANDISPLAY specific strings --------------------------------------------------
 
+#define FRAME_ID_ENGINE_SPEED_HEX                0x0618A001
+#define FRAME_ID_ENGINE_SPEED_DEC                2277121
